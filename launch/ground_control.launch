@@ -1,7 +1,7 @@
 <launch>
     <arg name="gui" default="true"/>
     <group if="$(arg gui)">
-        <node name="gui" pkg="drone_ground_control" type="ground_control_gui_node.py" ns="gc" output="screen" />
+        <node name="gui" pkg="drone_ground_control" type="ground_control_gui_node.py" output="screen" />
     </group>
     <node name="joy" pkg="joy" type="joy_node" ns="gc" />
 </launch>
