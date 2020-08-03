@@ -1,0 +1,13 @@
+{
+    "python.autoComplete.extraPaths": [
+        "/home/catkin_ws/devel/lib/python2.7/dist-packages",
+        "/opt/ros/kinetic/lib/python2.7/dist-packages"
+    ],
+    "python.linting.pylinArgs": [
+        "--extension-pkg-whitelist=PyQt5",
+        "--disable=R,C"
+    ],
+    "python.linting.pylintEnabled": true,
+    "python.linting.enabled": true,
+    
+}
