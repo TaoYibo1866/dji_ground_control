@@ -36,8 +36,8 @@ class Queue:
 class RosBridge:
     def __init__(self):
         self.local_position_queue = Queue(queue_size=150) # 50Hz
-        self.attitude_queue = Queue(queue_size=1200) # 100Hz
-        self.velocity_queue = Queue(queue_size=600) # 50Hz
+        self.attitude_queue = Queue(queue_size=2200) # 100Hz
+        self.velocity_queue = Queue(queue_size=1200) # 50Hz
 
         self.height_queue = Queue(queue_size=150)
         self.acceleration_queue = Queue(queue_size=150)
