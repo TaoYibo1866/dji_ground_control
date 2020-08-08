@@ -57,7 +57,7 @@ class HorizWidget(QFrame):
         velocity_queue = self.ros_bridge.velocity_queue.copy()
         if velocity_queue is not None:
             ts, vx, vy = split(velocity_queue, [0, 1, 2])
-
+           #ns
             ts = np.asarray(ts, np.uint64)
             vx = np.asarray(vx, np.float32)
             vy = np.asarray(vy, np.float32)
@@ -78,7 +78,7 @@ class VertWidget(QFrame):
         self.vert_label = QLabel("竖直速度(ENU)")
         self.vert_label.setAlignment(Qt.AlignCenter)
         self.plot_widget = pg.GraphicsLayoutWidget()
-        self.vx_curve = pg.PlotCurveItem()
+        self.vz_curve = pg.PlotCurveItem()
 
         self.vert_plot = self.plot_widget.addPlot(row=0, col=0)
         self.vert_plot.setXRange(0, 10)
@@ -86,7 +86,7 @@ class VertWidget(QFrame):
         self.vert_plot.showAxis('right')
         self.vert_plot.showAxis('top')
 
-        self.vert_plot.addItem(self.vx_curve)
+        self.vert_plot.addItem(self.vz_curve)
 
         self.layout.addWidget(self.vert_label, 0, 0, 1, 1)
         self.layout.addWidget(self.plot_widget, 1, 0, 1, 1)
@@ -96,6 +96,16 @@ class VertWidget(QFrame):
         self.vert_timer.timeout.connect(self.update)
 
     def update(self):
+        velocity_queue = self.ros_bridge.velocity_queue.copy()
+        if velocity_queue is not None:
+            ts, vz = split(velocity_queue, [0, 3])
+           #ns
+            ts = np.asarray(ts, np.uint64)
+            vz = np.asarray(vz, np.float32)
+
+            idz = find_nearest(ts, ts[-1] - 10 * 10**9)
+            t = (ts[idz:] - ts[idz]) * 10**-9
+            self.vz_curve.setData(t, vz[idz:], pen=pg.mkPen('b', width=2), brush=(0,0,255,70), fillLevel=0)
         return
 
 class YawWidget(QFrame):
@@ -126,6 +136,15 @@ class YawWidget(QFrame):
         self.yaw_timer.timeout.connect(self.update)
 
     def update(self):
+        attitude = self.ros_bridge.attitude_queue.copy()
+        if attitude is not None:
+            ts, yaw = split(attitude, [0, 7])
+            ts = np.asarray(ts, np.uint64)
+            yaw = np.asarray(yaw, np.float32)
+            
+            idyaw = find_nearest(ts, ts[-1] - 10 * 10**9)
+            t = (ts[idyaw:] - ts[idyaw]) * 10**-9
+            self.yaw_curve.setData(t, yaw[idyaw:], pen=pg.mkPen('b', width=2), brush=(0,0,255,70), fillLevel=0)
         return
 
 class LocusWidget(QFrame):
@@ -215,7 +234,7 @@ class TelemWidget(QFrame):
         self.battery_state_voltage_label = QLabel("电压[v]:")
         self.battery_state_current_label = QLabel("电流[A]:")
         self.battery_state_percentage_label = QLabel("百分比:")
-        self.flight_status_label = QLabel("当前飞行模式:")
+        self.flight_status_label = QLabel("飞行模式:")
         self.rc_axes0_label = QLabel("Roll Channel:")
         self.rc_axes1_label = QLabel("Pitch Channel:")
         self.rc_axes2_label = QLabel("Yaw Channel:")
@@ -255,20 +274,20 @@ class TelemWidget(QFrame):
         self.rc_axes4_label.setFrameShape(QFrame.Box)
         self.rc_axes5_label.setFrameShape(QFrame.Box)
 
-        self.layout.addWidget(self.local_position_x_label, 0, 0, 1, 1)
-        self.layout.addWidget(self.local_position_y_label, 0, 1, 1, 1)
-        self.layout.addWidget(self.local_position_z_label, 0, 2, 1, 1)
+        self.layout.addWidget(self.local_position_x_label, 1, 0, 1, 1)
+        self.layout.addWidget(self.local_position_y_label, 1, 1, 1, 1)
+        self.layout.addWidget(self.local_position_z_label, 1, 2, 1, 1)
 
-        self.layout.addWidget(self.height_label, 3, 2, 1, 1)
+        self.layout.addWidget(self.height_label, 0, 2, 1, 1)
 
-        self.layout.addWidget(self.acceleration_x_label, 2, 0, 1, 1)
-        self.layout.addWidget(self.acceleration_y_label, 2, 1, 1, 1)
-        self.layout.addWidget(self.acceleration_z_label, 2, 2, 1, 1)
-        self.layout.addWidget(self.velocity_x_label, 1, 0, 1, 1)
-        self.layout.addWidget(self.velocity_y_label, 1, 1, 1, 1)
-        self.layout.addWidget(self.velocity_z_label, 1, 2, 1, 1)
-        self.layout.addWidget(self.gps_position_latitude_label, 3, 0, 1, 1)
-        self.layout.addWidget(self.gps_position_longitude_label, 3, 1, 1, 1)
+        self.layout.addWidget(self.acceleration_x_label, 3, 0, 1, 1)
+        self.layout.addWidget(self.acceleration_y_label, 3, 1, 1, 1)
+        self.layout.addWidget(self.acceleration_z_label, 3, 2, 1, 1)
+        self.layout.addWidget(self.velocity_x_label, 2, 0, 1, 1)
+        self.layout.addWidget(self.velocity_y_label, 2, 1, 1, 1)
+        self.layout.addWidget(self.velocity_z_label, 2, 2, 1, 1)
+        self.layout.addWidget(self.gps_position_latitude_label, 0, 0, 1, 1)
+        self.layout.addWidget(self.gps_position_longitude_label, 0, 1, 1, 1)
         #self.layout.addWidget(self.gps_position_altitude_label, 3, 2, 1, 1)
         self.layout.addWidget(self.angular_velocity_x_label, 4, 0, 1, 1)
         self.layout.addWidget(self.angular_velocity_y_label, 4, 1, 1, 1)
@@ -302,7 +321,7 @@ class TelemWidget(QFrame):
         
         height = self.ros_bridge.height_queue.read()
         if height is not None:
-            self.height_label.setText("Height[m]: {: 2.1f}".format(height))
+            self.height_label.setText("高度[m]: {: 2.1f}".format(height))
 
         acceleration = self.ros_bridge.acceleration_queue.read()
         if acceleration is not None:
@@ -324,9 +343,9 @@ class TelemWidget(QFrame):
         
         angular_velocity = self.ros_bridge.angular_velocity_queue.read()
         if angular_velocity is not None:
-            self.angular_velocity_x_label.setText("E[rad/s]: {: 2.1f}".format(angular_velocity[1]))
-            self.angular_velocity_y_label.setText("N[rad/s]: {: 2.1f}".format(angular_velocity[2]))
-            self.angular_velocity_z_label.setText("U[rad/s]: {: 2.1f}".format(angular_velocity[3]))
+            self.angular_velocity_x_label.setText("E[deg/s]: {: 2.1f}".format(angular_velocity[1]))
+            self.angular_velocity_y_label.setText("N[deg/s]: {: 2.1f}".format(angular_velocity[2]))
+            self.angular_velocity_z_label.setText("U[deg/s]: {: 2.1f}".format(angular_velocity[3]))
 
         attitude = self.ros_bridge.attitude_queue.read()
         if attitude is not None:
@@ -356,11 +375,11 @@ class TelemWidget(QFrame):
 
         rc = self.ros_bridge.rc_queue.read()
         if rc is not None:
-            self.rc_axes0_label.setText("Roll Channel: {: 2.1f}".format(rc[1]))
-            self.rc_axes1_label.setText("Pitch Channel: {: 2.1f}".format(rc[2]))
-            self.rc_axes2_label.setText("Yaw Channel: {: 2.1f}".format(rc[3]))
-            self.rc_axes3_label.setText("Throttle Channel: {: 2.1f}".format(rc[4]))
-            self.rc_axes4_label.setText("Mode switch: {: 2.1f}".format(rc[5]))
+            self.rc_axes0_label.setText("滚动通道: {: 2.1f}".format(rc[1]))
+            self.rc_axes1_label.setText("俯仰通道: {: 2.1f}".format(rc[2]))
+            self.rc_axes2_label.setText("偏航通道: {: 2.1f}".format(rc[3]))
+            self.rc_axes3_label.setText("节流通道: {: 2.1f}".format(rc[4]))
+            self.rc_axes4_label.setText("模式开关: {: 2.1f}".format(rc[5]))
             self.rc_axes5_label.setText("支撑架: {: 2.1f}".format(rc[6]))
       
         return

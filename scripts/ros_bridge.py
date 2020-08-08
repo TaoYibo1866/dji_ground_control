@@ -9,6 +9,8 @@ import rospy
 from geometry_msgs.msg import PointStamped, QuaternionStamped, Vector3Stamped
 from std_msgs.msg import Float32, UInt8
 from sensor_msgs.msg import NavSatFix, BatteryState, Joy 
+from tf.transformations import euler_from_quaternion, rotation_matrix
+import math
 
 class Queue:
     def __init__(self, queue_size=1):
@@ -34,8 +36,8 @@ class Queue:
 class RosBridge:
     def __init__(self):
         self.local_position_queue = Queue(queue_size=150) # 50Hz
-        self.attitude_queue = Queue(queue_size=5) # 100Hz
-        self.velocity_queue = Queue(queue_size=600) # 50Hz
+        self.attitude_queue = Queue(queue_size=2200) # 100Hz
+        self.velocity_queue = Queue(queue_size=1200) # 50Hz
 
         self.height_queue = Queue(queue_size=150)
         self.acceleration_queue = Queue(queue_size=150)
@@ -69,7 +71,12 @@ class RosBridge:
         self.local_position_queue.append((pos.header.stamp.to_nsec(), pos.point.x, pos.point.y, pos.point.z))
         return
     def att_cb(self, att):
-        self.attitude_queue.append((att.header.stamp.to_nsec(), att.quaternion.x, att.quaternion.y, att.quaternion.z, att.quaternion.w))
+        q_i2b=[att.quaternion.x, att.quaternion.y, att.quaternion.z, att.quaternion.w]
+        y, p, r = euler_from_quaternion(q_i2b, axes='rzyx')
+        r_=r*180/math.pi
+        p_=p*180/math.pi
+        y_=y*180/math.pi
+        self.attitude_queue.append((att.header.stamp.to_nsec(), att.quaternion.x, att.quaternion.y, att.quaternion.z, att.quaternion.w, r_, p_, y_))
         return
     def vel_cb(self, vel):
         self.velocity_queue.append((vel.header.stamp.to_nsec(), vel.vector.x, vel.vector.y, vel.vector.z))
@@ -91,8 +98,8 @@ class RosBridge:
         self.gps_position_queue.append((stamp, gps_pos.latitude, gps_pos.longitude, gps_pos.altitude))
         return
     def angular_velocity_cb(self, angular_velocity):
+        stamp = 0
         # TODO: stamp synchronize
-        stamp = 0.0
         self.angular_velocity_queue.append((stamp, angular_velocity.vector.x, angular_velocity.vector.y, angular_velocity.vector.z))
         return
     
