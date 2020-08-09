@@ -1,6 +1,5 @@
 #!/usr/bin/env python2.7
 # -*- coding: utf-8 -*-
-
 import sys; sys.dont_write_bytecode = True
 
 from PyQt5.QtWidgets import QGridLayout, QLabel, QFrame
@@ -8,8 +7,7 @@ from PyQt5.QtCore import Qt, QTimer
 import pyqtgraph as pg
 #from mem_top import mem_top
 import numpy as np
-
-from tf.transformations import euler_from_quaternion, rotation_matrix
+from tf.transformations import rotation_matrix
 import math
 
 def find_nearest(array, value):
@@ -188,9 +186,8 @@ class LocusWidget(QFrame):
             self.locus_curve.setData(-n, e, pen=pg.mkPen('g', width=3))
             self.locus_scatter.setData([-n[-1]], [e[-1]], pen=pg.mkPen('g', width=2))
             
-            q_i2b = attitude[1:]
-            yaw, _, _ = euler_from_quaternion(q_i2b, axes='rzyx')
-            arrow = self.calc_arrow(x=-n[-1], y=e[-1], yaw=yaw)
+            yaw = attitude[-1]
+            arrow = self.calc_arrow(x=-n[-1], y=e[-1], yaw=yaw * math.pi / 180)
             self.locus_arrow.setData(arrow[0,:], arrow[1,:], pen=pg.mkPen('r', width=2))
         
         return
@@ -213,7 +210,7 @@ class TelemWidget(QFrame):
         self.local_position_x_label = QLabel("E[m]:")
         self.local_position_y_label = QLabel("N[m]:")
         self.local_position_z_label = QLabel("U[m]:")
-        self.height_label = QLabel("Height[m]:")
+        self.height_label = QLabel("高度[m]:")
         self.acceleration_x_label = QLabel("E[m/s^2]:")
         self.acceleration_y_label = QLabel("N[m/s^2]:")
         self.acceleration_z_label = QLabel("U[m/s^2]:")
@@ -223,24 +220,24 @@ class TelemWidget(QFrame):
         self.gps_position_latitude_label = QLabel("纬度:")
         self.gps_position_longitude_label = QLabel("经度:")
         #self.gps_position_altitude_label = QLabel("高度:")
-        self.angular_velocity_x_label = QLabel("E[rad/s]:")
-        self.angular_velocity_y_label = QLabel("N[rad/s]:")
-        self.angular_velocity_z_label = QLabel("U[rad/s]:")
-        self.attitude_x_label = QLabel("欧拉角r:")
-        self.attitude_y_label = QLabel("欧拉角p:")
-        self.attitude_z_label = QLabel("欧拉角y:")
+        self.angular_velocity_x_label = QLabel("E[deg/s]:")
+        self.angular_velocity_y_label = QLabel("N[deg/s]:")
+        self.angular_velocity_z_label = QLabel("U[deg/s]:")
+        self.attitude_x_label = QLabel("滚转[deg]:")
+        self.attitude_y_label = QLabel("俯仰[deg]:")
+        self.attitude_z_label = QLabel("偏航[deg]:")
         #self.attitude_w_label = QLabel("四元数w:")
         self.gps_health_label = QLabel("GPS强度:")
-        self.battery_state_voltage_label = QLabel("电压[v]:")
+        self.battery_state_voltage_label = QLabel("电压[V]:")
         self.battery_state_current_label = QLabel("电流[A]:")
-        self.battery_state_percentage_label = QLabel("百分比:")
+        self.battery_state_percentage_label = QLabel("百分比[%]:")
         self.flight_status_label = QLabel("飞行模式:")
-        self.rc_axes0_label = QLabel("Roll Channel:")
-        self.rc_axes1_label = QLabel("Pitch Channel:")
-        self.rc_axes2_label = QLabel("Yaw Channel:")
-        self.rc_axes3_label = QLabel("Throttle Channel:")
-        self.rc_axes4_label = QLabel("Mode switch :")
-        self.rc_axes5_label = QLabel("Landing gear (H) switch:")
+        self.rc_axes0_label = QLabel("滚转通道:")
+        self.rc_axes1_label = QLabel("俯仰通道:")
+        self.rc_axes2_label = QLabel("偏航通道:")
+        self.rc_axes3_label = QLabel("推力通道:")
+        self.rc_axes4_label = QLabel("模式开关:")
+        self.rc_axes5_label = QLabel("支撑架:")
  
         self.local_position_x_label.setFrameShape(QFrame.Box)
         self.local_position_y_label.setFrameShape(QFrame.Box)
@@ -289,12 +286,12 @@ class TelemWidget(QFrame):
         self.layout.addWidget(self.gps_position_latitude_label, 0, 0, 1, 1)
         self.layout.addWidget(self.gps_position_longitude_label, 0, 1, 1, 1)
         #self.layout.addWidget(self.gps_position_altitude_label, 3, 2, 1, 1)
-        self.layout.addWidget(self.angular_velocity_x_label, 4, 0, 1, 1)
-        self.layout.addWidget(self.angular_velocity_y_label, 4, 1, 1, 1)
-        self.layout.addWidget(self.angular_velocity_z_label, 4, 2, 1, 1)
-        self.layout.addWidget(self.attitude_x_label, 5, 0, 1, 1)
-        self.layout.addWidget(self.attitude_y_label, 5, 1, 1, 1)
-        self.layout.addWidget(self.attitude_z_label, 5, 2, 1, 1)
+        self.layout.addWidget(self.angular_velocity_x_label, 5, 0, 1, 1)
+        self.layout.addWidget(self.angular_velocity_y_label, 5, 1, 1, 1)
+        self.layout.addWidget(self.angular_velocity_z_label, 5, 2, 1, 1)
+        self.layout.addWidget(self.attitude_x_label, 4, 0, 1, 1)
+        self.layout.addWidget(self.attitude_y_label, 4, 1, 1, 1)
+        self.layout.addWidget(self.attitude_z_label, 4, 2, 1, 1)
         #self.layout.addWidget(self.attitude_w_label, 5, 3, 1, 1)
         self.layout.addWidget(self.gps_health_label, 6, 0, 1, 1)
         self.layout.addWidget(self.battery_state_voltage_label, 7, 0, 1, 1)
@@ -349,14 +346,12 @@ class TelemWidget(QFrame):
 
         attitude = self.ros_bridge.attitude_queue.read()
         if attitude is not None:
-            q_i2b = attitude[1:]
-            y, p, r = euler_from_quaternion(q_i2b, axes='rzyx')
-            r_=r*180/math.pi
-            p_=p*180/math.pi
-            y_=y*180/math.pi
-            self.attitude_x_label.setText("滚转: {: 2.1f}".format(r_))
-            self.attitude_y_label.setText("俯仰: {: 2.1f}".format(p_))
-            self.attitude_z_label.setText("偏航: {: 2.1f}".format(y_))
+            yaw = attitude[-1]
+            pitch = attitude[-2]
+            roll = attitude[-3]
+            self.attitude_x_label.setText("滚转[deg]: {: 2.1f}".format(roll))
+            self.attitude_y_label.setText("俯仰[deg]: {: 2.1f}".format(pitch))
+            self.attitude_z_label.setText("偏航[deg]: {: 2.1f}".format(yaw))
             #self.attitude_w_label.setText("欧拉角w: {: 2.3f}".format(attitude[4]))
 
         gps_health = self.ros_bridge.gps_health_queue.read()
@@ -364,10 +359,10 @@ class TelemWidget(QFrame):
             self.gps_health_label.setText("GPS强度: {}".format(gps_health))
         
         battery_state = self.ros_bridge.battery_state_queue.read()
-        if gps_position is not None:
-            self.battery_state_voltage_label.setText("电压[V]: {: 2.1f}".format(gps_position[1]))
-            self.battery_state_current_label.setText("电流[A]: {: 2.1f}".format(gps_position[2]))
-            self.battery_state_percentage_label.setText("百分比[%]: {: 2.1f}".format(gps_position[3]))
+        if battery_state is not None:
+            self.battery_state_voltage_label.setText("电压[V]: {: 2.1f}".format(battery_state[1]))
+            self.battery_state_current_label.setText("电流[A]: {: 2.1f}".format(battery_state[2]))
+            self.battery_state_percentage_label.setText("百分比[%]: {: 2.1f}".format(battery_state[3]))
 
         flight_status = self.ros_bridge.flight_status_queue.read()
         if flight_status is not None:
@@ -378,7 +373,7 @@ class TelemWidget(QFrame):
             self.rc_axes0_label.setText("滚动通道: {: 2.1f}".format(rc[1]))
             self.rc_axes1_label.setText("俯仰通道: {: 2.1f}".format(rc[2]))
             self.rc_axes2_label.setText("偏航通道: {: 2.1f}".format(rc[3]))
-            self.rc_axes3_label.setText("节流通道: {: 2.1f}".format(rc[4]))
+            self.rc_axes3_label.setText("推力通道: {: 2.1f}".format(rc[4]))
             self.rc_axes4_label.setText("模式开关: {: 2.1f}".format(rc[5]))
             self.rc_axes5_label.setText("支撑架: {: 2.1f}".format(rc[6]))
       

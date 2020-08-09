@@ -1,6 +1,6 @@
 <launch>
     <arg name="gui" default="true"/>
-    <arg name="bag_name" default="demo_flight_control"/>
+    <arg name="bag_name" default="ibvs_hil"/>
     <node name="player" pkg="rosbag" type="play" args="$(find drone_ground_control)/bags/$(arg bag_name).bag"/>
     <include file="$(find drone_ground_control)/launch/ground_control.launch">
         <arg name="gui" value="$(arg gui)"/>
