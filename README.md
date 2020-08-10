@@ -7,4 +7,4 @@
 + joy (sudo apt-get install ros-kinetic-joy)
 + drone_comm package
 # Usage
-+ roslaunch drone_ground_control replay.launch
++ roslaunch ground_control replay.launch
