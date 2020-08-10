@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 import sys; sys.dont_write_bytecode = True
 
-from PyQt5.QtWidgets import QGridLayout, QLabel, QFrame
+from PyQt5.QtWidgets import QGridLayout, QLabel, QFrame, QComboBox, QPushButton
 from PyQt5.QtCore import Qt, QTimer
 import pyqtgraph as pg
 #from mem_top import mem_top
@@ -22,127 +22,91 @@ def split(msg_queue, cols):
             result[i].append(msg[col])
     return result
 
-class HorizWidget(QFrame):
-    def __init__(self, ros_bridge):
+class GenPlotWidget(QFrame):
+    def __init__(self, ros_bridge, quan=0, axis=0):
         QFrame.__init__(self)
         self.ros_bridge = ros_bridge
         self.layout = QGridLayout(self)
 
         #plot widget
-        self.horiz_label = QLabel("水平速度(ENU)")
-        self.horiz_label.setAlignment(Qt.AlignCenter)
+        self.scope_label = QLabel()
         self.plot_widget = pg.GraphicsLayoutWidget()
-        self.vx_curve = pg.PlotCurveItem()
-        self.vy_curve = pg.PlotCurveItem()
+        self.quan_combo = QComboBox()
+        self.axis_combo = QComboBox()
+        self.enter_button = QPushButton()
 
-        self.horiz_plot = self.plot_widget.addPlot(row=0, col=0)
-        self.horiz_plot.setXRange(0, 10)
-        self.horiz_plot.showGrid(x=1, y=1)
-        self.horiz_plot.showAxis('right')
-        self.horiz_plot.showAxis('top')
+        self.scope_label.setAlignment(Qt.AlignCenter)
 
-        self.horiz_plot.addItem(self.vx_curve)
-        self.horiz_plot.addItem(self.vy_curve)
+        self.plot = self.plot_widget.addPlot(row=0, col=0)
+        self.plot.setXRange(0, 20)
+        self.plot.showGrid(x=1, y=1)
+        self.plot.showAxis('right')
+        self.plot.showAxis('top')
 
-        self.layout.addWidget(self.horiz_label, 0, 0, 1, 1)
-        self.layout.addWidget(self.plot_widget, 1, 0, 1, 1)
+        self.curve = pg.PlotCurveItem()
+        self.plot.addItem(self.curve)
 
-        self.horiz_timer = QTimer()
-        self.horiz_timer.start(100)
-        self.horiz_timer.timeout.connect(self.update)
+        self.quan_combo.addItems(['Velocity_ENU',
+                                  'Local_Position',
+                                  'Attitude'])
+        self.axis_combo.addItems(['X', 'Y', 'Z'])
+        
+        self.quan_combo.setCurrentIndex(quan)
+        self.axis_combo.setCurrentIndex(axis)
+
+        self.enter_button.setText('Enter')
+        self.enter_button.clicked.connect(self.switch_case)
+
+        self.case = [self.quan_combo.currentIndex(), self.axis_combo.currentIndex()]
+        self.scope_label.setText("{}->{}".format(self.quan_combo.currentText(), self.axis_combo.currentText()))
+
+        self.layout.addWidget(self.scope_label, 0, 0, 1, 3)
+        self.layout.addWidget(self.plot_widget, 1, 0, 1, 3)
+        self.layout.addWidget(self.quan_combo, 2, 0, 1, 1)
+        self.layout.addWidget(self.axis_combo, 2, 1, 1, 1)
+        self.layout.addWidget(self.enter_button, 2, 2, 1, 1)
+
+        self.timer = QTimer()
+        self.timer.start(100)
+        self.timer.timeout.connect(self.update)
 
     def update(self):
-        velocity_queue = self.ros_bridge.velocity_queue.copy()
-        if velocity_queue is not None:
-            ts, vx, vy = split(velocity_queue, [0, 1, 2])
-           #ns
-            ts = np.asarray(ts, np.uint64)
-            vx = np.asarray(vx, np.float32)
-            vy = np.asarray(vy, np.float32)
+        quan, axis = self.case
+        if quan == 0:
+            if axis == 0:
+                self.plot_curve(self.curve, self.ros_bridge.velocity_queue.copy(), 0, 1, pg.mkPen('r', width=2), (255,0,0,70))
+            elif axis == 1:
+                self.plot_curve(self.curve, self.ros_bridge.velocity_queue.copy(), 0, 2, pg.mkPen('g', width=2), (0,255,0,70))
+            elif axis == 2:
+                self.plot_curve(self.curve, self.ros_bridge.velocity_queue.copy(), 0, 3, pg.mkPen('b', width=2), (0,0,255,70))
+        elif quan == 1:
+            if axis == 0:
+                self.plot_curve(self.curve, self.ros_bridge.local_position_queue.copy(), 0, 1, pg.mkPen('r', width=2), (255,0,0,70))
+            elif axis == 1:
+                self.plot_curve(self.curve, self.ros_bridge.local_position_queue.copy(), 0, 2, pg.mkPen('g', width=2), (0,255,0,70))
+            elif axis == 2:
+                self.plot_curve(self.curve, self.ros_bridge.local_position_queue.copy(), 0, 3, pg.mkPen('b', width=2), (0,0,255,70))
+        elif quan == 2:
+            if axis == 0:
+                self.plot_curve(self.curve, self.ros_bridge.attitude_queue.copy(), 0, -3, pg.mkPen('r', width=2), (255,0,0,70))
+            elif axis == 1:
+                self.plot_curve(self.curve, self.ros_bridge.attitude_queue.copy(), 0, -2, pg.mkPen('g', width=2), (0,255,0,70))
+            elif axis == 2:
+                self.plot_curve(self.curve, self.ros_bridge.attitude_queue.copy(), 0, -1, pg.mkPen('b', width=2), (0,0,255,70))
+        return
 
-            idx = find_nearest(ts, ts[-1] - 10 * 10**9)
+    def switch_case(self, _):
+        self.case = [self.quan_combo.currentIndex(), self.axis_combo.currentIndex()]
+        self.scope_label.setText("{}->{}".format(self.quan_combo.currentText(), self.axis_combo.currentText()))
+    
+    def plot_curve(self, curve, queue, x, y, pen, brush):
+        if queue is not None:
+            ts, val = split(queue, [x, y])
+            ts = np.asarray(ts, np.uint64)
+            val = np.asarray(val, np.float32)
+            idx = find_nearest(ts, ts[-1] - 20 * 10**9)
             t = (ts[idx:] - ts[idx]) * 10**-9
-            self.vx_curve.setData(t, vx[idx:], pen=pg.mkPen('r', width=2), brush=(255,0,0,70), fillLevel=0)
-            self.vy_curve.setData(t, vy[idx:], pen=pg.mkPen('g', width=2), brush=(0,255,0,70), fillLevel=0)
-        return
-
-class VertWidget(QFrame):
-    def __init__(self, ros_bridge):
-        QFrame.__init__(self)
-        self.ros_bridge = ros_bridge
-        self.layout = QGridLayout(self)
-
-        #plot widget
-        self.vert_label = QLabel("竖直速度(ENU)")
-        self.vert_label.setAlignment(Qt.AlignCenter)
-        self.plot_widget = pg.GraphicsLayoutWidget()
-        self.vz_curve = pg.PlotCurveItem()
-
-        self.vert_plot = self.plot_widget.addPlot(row=0, col=0)
-        self.vert_plot.setXRange(0, 10)
-        self.vert_plot.showGrid(x=1, y=1)
-        self.vert_plot.showAxis('right')
-        self.vert_plot.showAxis('top')
-
-        self.vert_plot.addItem(self.vz_curve)
-
-        self.layout.addWidget(self.vert_label, 0, 0, 1, 1)
-        self.layout.addWidget(self.plot_widget, 1, 0, 1, 1)
-
-        self.vert_timer = QTimer()
-        self.vert_timer.start(100)
-        self.vert_timer.timeout.connect(self.update)
-
-    def update(self):
-        velocity_queue = self.ros_bridge.velocity_queue.copy()
-        if velocity_queue is not None:
-            ts, vz = split(velocity_queue, [0, 3])
-           #ns
-            ts = np.asarray(ts, np.uint64)
-            vz = np.asarray(vz, np.float32)
-
-            idz = find_nearest(ts, ts[-1] - 10 * 10**9)
-            t = (ts[idz:] - ts[idz]) * 10**-9
-            self.vz_curve.setData(t, vz[idz:], pen=pg.mkPen('b', width=2), brush=(0,0,255,70), fillLevel=0)
-        return
-
-class YawWidget(QFrame):
-    def __init__(self, ros_bridge):
-        QFrame.__init__(self)
-        self.ros_bridge = ros_bridge
-        self.layout = QGridLayout(self)
-
-        #plot widget
-        self.yaw_label = QLabel("偏航角")
-        self.yaw_label.setAlignment(Qt.AlignCenter)
-        self.plot_widget = pg.GraphicsLayoutWidget()
-        self.yaw_curve = pg.PlotCurveItem()
-
-        self.yaw_plot = self.plot_widget.addPlot(row=0, col=0)
-        self.yaw_plot.setXRange(0, 10)
-        self.yaw_plot.showGrid(x=1, y=1)
-        self.yaw_plot.showAxis('right')
-        self.yaw_plot.showAxis('top')
-
-        self.yaw_plot.addItem(self.yaw_curve)
-
-        self.layout.addWidget(self.yaw_label, 0, 0, 1, 1)
-        self.layout.addWidget(self.plot_widget, 1, 0, 1, 1)
-
-        self.yaw_timer = QTimer()
-        self.yaw_timer.start(100)
-        self.yaw_timer.timeout.connect(self.update)
-
-    def update(self):
-        attitude = self.ros_bridge.attitude_queue.copy()
-        if attitude is not None:
-            ts, yaw = split(attitude, [0, 7])
-            ts = np.asarray(ts, np.uint64)
-            yaw = np.asarray(yaw, np.float32)
-            
-            idyaw = find_nearest(ts, ts[-1] - 10 * 10**9)
-            t = (ts[idyaw:] - ts[idyaw]) * 10**-9
-            self.yaw_curve.setData(t, yaw[idyaw:], pen=pg.mkPen('b', width=2), brush=(0,0,255,70), fillLevel=0)
+            curve.setData(t, val[idx:], pen=pen, brush=brush, fillLevel=0)
         return
 
 class LocusWidget(QFrame):

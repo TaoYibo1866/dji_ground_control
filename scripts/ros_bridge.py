@@ -9,7 +9,7 @@ import rospy
 from geometry_msgs.msg import PointStamped, QuaternionStamped, Vector3Stamped
 from std_msgs.msg import Float32, UInt8
 from sensor_msgs.msg import NavSatFix, BatteryState, Joy
-from tian_gong_zhu_ta_comm.msg import IBVSActionFeedback
+from tian_gong_zhu_ta_msgs.msg import IBVSActionFeedback
 from tf.transformations import euler_from_quaternion
 import math
 
@@ -36,9 +36,9 @@ class Queue:
 
 class RosBridge:
     def __init__(self):
-        self.local_position_queue = Queue(queue_size=150) # 50Hz
-        self.attitude_queue = Queue(queue_size=2200) # 100Hz
-        self.velocity_queue = Queue(queue_size=1200) # 50Hz
+        self.local_position_queue = Queue(queue_size=1000) # 50Hz
+        self.attitude_queue = Queue(queue_size=2000) # 100Hz
+        self.velocity_queue = Queue(queue_size=1000) # 50Hz
 
         self.height_queue = Queue(queue_size=150)
         self.acceleration_queue = Queue(queue_size=150)
