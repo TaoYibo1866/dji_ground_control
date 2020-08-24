@@ -12,6 +12,7 @@ from sensor_msgs.msg import NavSatFix, BatteryState, Joy
 from tian_gong_zhu_ta_msgs.msg import IBVSActionFeedback
 from tf.transformations import euler_from_quaternion
 import math
+import numpy as np
 
 class Queue:
     def __init__(self, queue_size=1):
@@ -53,6 +54,12 @@ class RosBridge:
 
         self.ibvs_feedback_queue = Queue(queue_size=600)
 
+        self.Horizontal_velocity_queue = Queue(queue_size=600)
+        self.Vertical_velocity_queue = Queue(queue_size=600)
+        self.Yaw_angle_queue = Queue(queue_size=600)
+        
+        self.log_queue = Queue(10)
+        
         rospy.Subscriber('/dji_sdk/local_position', PointStamped, callback=self.loc_pos_cb, queue_size=1)
         rospy.Subscriber('/dji_sdk/attitude', QuaternionStamped, callback=self.att_cb, queue_size=1)
         rospy.Subscriber('/dji_sdk/velocity', Vector3Stamped, callback=self.vel_cb, queue_size=1)
@@ -69,6 +76,9 @@ class RosBridge:
         rospy.Subscriber('/dji_sdk/rc', Joy, callback=self.rc_cb, queue_size=1)
 
         rospy.Subscriber('/ibvs_action/action/feedback', IBVSActionFeedback, callback=self.ibvs_fb_cb, queue_size=1)
+
+        rospy.Subscriber('/dji_sdk/flight_control_setpoint_generic', Joy, callback=self.flight_control_setpoint_generic_cb, queue_size=1)
+
 
     def loc_pos_cb(self, pos):
         self.local_position_queue.append((pos.header.stamp.to_nsec(), pos.point.x, pos.point.y, pos.point.z))
@@ -124,4 +134,25 @@ class RosBridge:
                                          fb.feedback.pose.position.x,
                                          fb.feedback.pose.position.y,
                                          fb.feedback.pose.position.z))
+        return
+    
+    def flight_control_setpoint_generic_cb(self, fcsg):
+        #a=np.zeros((1,8))
+        #fcsg1 = format(int(fcsg.axes[4]),'b')
+        #for i in range(0,7,1):
+         #   a[:,i+1]=fcsg1[i]
+        if int(fcsg.axes[4]) & 0b00000001 == 0x01:
+            if int(fcsg.axes[4]) & 0b01000000 == 0x40:
+                self.Horizontal_velocity_queue.append((fcsg.header.stamp.to_nsec(),fcsg.axes[0],fcsg.axes[1]))
+            if int(fcsg.axes[4]) & 0b00000000 == 0x00:
+                self.Vertical_velocity_queue.append((fcsg.header.stamp.to_nsec(),fcsg.axes[2]))
+            if int(fcsg.axes[4]) & 0b00000000 == 0x00:
+                self.Yaw_angle_queue.append((fcsg.header.stamp.to_nsec(),fcsg.axes[3]))
+        #if int(a[:,6]) == 0 and int(a[:,7]) == 1:
+            #if int(a[:,0]) == 0 and int(a[:,1]) == 1:
+               # self.Horizontal_velocity_queue.append((fcsg.header.stamp.to_nsec(),fcsg.axes[0],fcsg.axes[1]))
+            #if int(a[:,2]) == 0 and int(a[:,3]) == 0:
+             #   self.Vertical_velocity_queue.append((fcsg.header.stamp.to_nsec(),fcsg.axes[2]))
+            #if int(a[:,4]) == 0 and int(a[:,5]) == 0:
+             #   self.Yaw_angle_queue.append((fcsg.header.stamp.to_nsec(),fcsg.axes[3]))
         return
