@@ -60,6 +60,126 @@ class GenPlotWidget(QFrame):
         QFrame.__init__(self)
         self.ros_bridge = ros_bridge
         self.layout = QGridLayout(self)
+        
+        #plot widget
+        self.scope_label = QLabel()
+        self.plot_widget = pg.GraphicsLayoutWidget()
+        self.quan_combo = QComboBox()
+        self.axis_combo = QComboBox()
+        self.enter_button = QPushButton()
+        self.keep_button = QPushButton()
+
+        self.scope_label.setAlignment(Qt.AlignCenter)
+
+        self.plot = self.plot_widget.addPlot(row=0, col=0)
+        self.plot.setXRange(0, 20)
+        self.plot.showGrid(x=1, y=1)
+        self.plot.showAxis('right')
+        self.plot.showAxis('top')
+
+        self.curve = pg.PlotCurveItem()
+        self.cmd_curve = pg.PlotCurveItem()
+        self.plot.addItem(self.curve)
+        self.plot.addItem(self.cmd_curve)
+
+        self.quan_combo.addItems(['Velocity_ENU',
+                                  'Local_Position',
+                                  'Attitude'])
+        self.axis_combo.addItems(['X', 'Y', 'Z'])
+        
+        self.quan_combo.setCurrentIndex(quan)
+        self.axis_combo.setCurrentIndex(axis)
+
+        self.enter_button.setText('Enter')
+        self.enter_button.clicked.connect(self.switch_case)
+
+        self.stop_button = ToggleButton(["绘制", "暂停"], self)
+        self.stop_button.clicked.connect(self.stop)
+
+        self.case = [self.quan_combo.currentIndex(), self.axis_combo.currentIndex()]
+        self.scope_label.setText("{}->{}".format(self.quan_combo.currentText(), self.axis_combo.currentText()))
+
+        self.layout.addWidget(self.scope_label, 0, 0, 1, 4)
+        self.layout.addWidget(self.plot_widget, 1, 0, 1, 4)
+        self.layout.addWidget(self.quan_combo, 2, 0, 1, 1)
+        self.layout.addWidget(self.axis_combo, 2, 1, 1, 1)
+        self.layout.addWidget(self.enter_button, 2, 2, 1, 1)
+        self.layout.addWidget(self.stop_button, 2, 3, 1, 1)
+        
+        self.timer = QTimer() 
+        self.timer.start(100)        
+        self.timer.timeout.connect(self.update)
+    def update(self):
+        if self.stop_button.state == 0:
+            return
+        quan, axis = self.case
+        if quan == 0:
+            if axis == 0:
+                self.plot_curve(self.curve, self.ros_bridge.velocity_queue.copy(), 0, 1, pg.mkPen('r', width=2), (255,0,0,70))
+                self.plot_curve1(self.cmd_curve, self.ros_bridge.cmd_horiz_vel_queue.copy(), 0, 1, pg.mkPen('w', width=2), (255,255,255,10))
+            elif axis == 1:
+                self.plot_curve(self.curve, self.ros_bridge.velocity_queue.copy(), 0, 2, pg.mkPen('g', width=2), (0,255,0,70))
+                self.plot_curve1(self.cmd_curve, self.ros_bridge.cmd_horiz_vel_queue.copy(), 0, 2, pg.mkPen('w', width=2), (255,255,255,10))
+            elif axis == 2:
+                self.plot_curve(self.curve, self.ros_bridge.velocity_queue.copy(), 0, 3, pg.mkPen('b', width=2), (0,0,255,70))
+                self.plot_curve1(self.cmd_curve, self.ros_bridge.cmd_vert_vel_queue.copy(), 0, 1, pg.mkPen('w', width=2), (255,255,255,10))     
+        elif quan == 1:
+            if axis == 0:
+                self.plot_curve(self.curve, self.ros_bridge.local_position_queue.copy(), 0, 1, pg.mkPen('r', width=2), (255,0,0,70))           
+            elif axis == 1:
+                self.plot_curve(self.curve, self.ros_bridge.local_position_queue.copy(), 0, 2, pg.mkPen('g', width=2), (0,255,0,70))               
+            elif axis == 2:
+                self.plot_curve(self.curve, self.ros_bridge.local_position_queue.copy(), 0, 3, pg.mkPen('b', width=2), (0,0,255,70))
+        elif quan == 2:
+            if axis == 0:
+                self.plot_curve(self.curve, self.ros_bridge.attitude_queue.copy(), 0, -3, pg.mkPen('r', width=2), (255,0,0,70))
+                self.plot_curve1(self.cmd_curve, self.ros_bridge.cmd_yaw_queue.copy(), 0, -1, pg.mkPen('w', width=2), (255,255,255,10))
+            elif axis == 1:
+                self.plot_curve(self.curve, self.ros_bridge.attitude_queue.copy(), 0, -2, pg.mkPen('g', width=2), (0,255,0,70))
+                self.plot_curve1(self.cmd_curve, self.ros_bridge.cmd_yaw_queue.copy(), 0, -1, pg.mkPen('w', width=2), (255,255,255,10))
+            elif axis == 2:
+                self.plot_curve(self.curve, self.ros_bridge.attitude_queue.copy(), 0, -1, pg.mkPen('b', width=2), (0,0,255,70))
+                self.plot_curve1(self.cmd_curve, self.ros_bridge.cmd_yaw_queue.copy(), 0, -1, pg.mkPen('w', width=2), (255,255,255,10))
+        return
+    
+    def switch_case(self, _):
+        self.case = [self.quan_combo.currentIndex(), self.axis_combo.currentIndex()]
+        self.scope_label.setText("{}->{}".format(self.quan_combo.currentText(), self.axis_combo.currentText()))    
+    
+    def stop(self):
+        if self.stop_button.state == 0:
+            self.stop_button.state = 1
+            self.stop_button.setText(self.stop_button.text[1])
+        elif self.stop_button.state == 1:
+            self.stop_button.state = 0
+            self.stop_button.setText(self.stop_button.text[0])
+        return 
+    
+    def plot_curve(self, curve, queue, x, y, pen, brush):
+        if queue is not None:
+            ts, val = split(queue, [x, y])
+            ts = np.asarray(ts, np.uint64)
+            val = np.asarray(val, np.float32)
+            idx = find_nearest(ts, ts[-1] - 20 * 10**9)
+            t = (ts[idx:] - ts[idx]) * 10**-9
+            curve.setData(t, val[idx:], pen=pen, brush=brush, fillLevel=0)
+        return
+    
+    def plot_curve1(self, curve1, queue, x, y, pen, brush):
+        if queue is not None:
+            ts, val = split(queue, [x, y])
+            ts = np.asarray(ts, np.uint64)
+            val = np.asarray(val, np.float32)
+            idx = find_nearest(ts, ts[-1] - 20 * 10**9)
+            t = (ts[idx:] - ts[idx]) * 10**-9
+            curve1.setData(t, val[idx:], pen=pen, brush=brush, fillLevel=0)
+        return
+
+class GenPlotWidget(QFrame):
+    def __init__(self, ros_bridge, quan=0, axis=0):
+        QFrame.__init__(self)
+        self.ros_bridge = ros_bridge
+        self.layout = QGridLayout(self)
 
         #plot widget
         self.scope_label = QLabel()
