@@ -22,6 +22,37 @@ def split(msg_queue, cols):
             result[i].append(msg[col])
     return result
 
+class TabWidget(QTabWidget):
+    def __init__(self, ros_bridge):
+        QTabWidget.__init__(self)
+        
+        self.plot_widget_0 = GenPlotWidget(ros_bridge, 0, 0)
+        self.plot_widget_1 = GenPlotWidget(ros_bridge, 0, 1)
+        self.plot_widget_2 = GenPlotWidget(ros_bridge, 0, 2)
+        self.vision_widget = VisionWidget(ros_bridge)
+        self.mission_telem_widget = MissionTelemWidget(ros_bridge)
+
+        self.tab_one = QFrame()
+        self.tab_one_layout = QGridLayout(self.tab_one)
+        self.tab_one_layout.addWidget(self.plot_widget_0, 0, 0)
+        self.tab_one_layout.addWidget(self.plot_widget_1, 1, 0)
+        self.tab_one_layout.addWidget(self.plot_widget_2, 2, 0)
+        
+        self.tab_two = QFrame()
+        self.tab_two_layout = QGridLayout(self.tab_two)
+        self.tab_two_layout.addWidget(self.vision_widget, 0, 0)
+        self.tab_two_layout.addWidget(self.mission_telem_widget, 1, 0)
+
+        self.addTab(self.tab_one, '通用')
+        self.addTab(self.tab_two, '任务')
+
+        self.tab_timer = QTimer()
+        self.tab_timer.start(300)
+        self.tab_timer.timeout.connect(self.update)
+    def update(self):
+        self.currentWidget().update()
+        return
+
 class GenPlotWidget(QFrame):
     def __init__(self, ros_bridge, quan=0, axis=0):
         QFrame.__init__(self)
