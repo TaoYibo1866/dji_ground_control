@@ -2,13 +2,15 @@
 # -*- coding: utf-8 -*-
 import sys; sys.dont_write_bytecode = True
 
-from PyQt5.QtWidgets import QGridLayout, QLabel, QFrame, QComboBox, QPushButton
+from PyQt5.QtWidgets import QGridLayout, QLabel, QFrame, QComboBox, QPushButton, QTabWidget
 from PyQt5.QtCore import Qt, QTimer
 import pyqtgraph as pg
 #from mem_top import mem_top
 import numpy as np
 from tf.transformations import rotation_matrix
 import math
+
+from mission_widgets import VisionWidget, MissionTelemWidget
 
 def find_nearest(array, value):
     array = np.asarray(array)
