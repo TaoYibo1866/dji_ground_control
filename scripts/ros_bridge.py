@@ -137,22 +137,10 @@ class RosBridge:
         return
     
     def flight_control_setpoint_generic_cb(self, fcsg):
-        #a=np.zeros((1,8))
-        #fcsg1 = format(int(fcsg.axes[4]),'b')
-        #for i in range(0,7,1):
-         #   a[:,i+1]=fcsg1[i]
-        if int(fcsg.axes[4]) & 0b00000001 == 0x01:
-            if int(fcsg.axes[4]) & 0b01000000 == 0x40:
-                self.Horizontal_velocity_queue.append((fcsg.header.stamp.to_nsec(),fcsg.axes[0],fcsg.axes[1]))
-            if int(fcsg.axes[4]) & 0b00000000 == 0x00:
-                self.Vertical_velocity_queue.append((fcsg.header.stamp.to_nsec(),fcsg.axes[2]))
-            if int(fcsg.axes[4]) & 0b00000000 == 0x00:
-                self.Yaw_angle_queue.append((fcsg.header.stamp.to_nsec(),fcsg.axes[3]))
-        #if int(a[:,6]) == 0 and int(a[:,7]) == 1:
-            #if int(a[:,0]) == 0 and int(a[:,1]) == 1:
-               # self.Horizontal_velocity_queue.append((fcsg.header.stamp.to_nsec(),fcsg.axes[0],fcsg.axes[1]))
-            #if int(a[:,2]) == 0 and int(a[:,3]) == 0:
-             #   self.Vertical_velocity_queue.append((fcsg.header.stamp.to_nsec(),fcsg.axes[2]))
-            #if int(a[:,4]) == 0 and int(a[:,5]) == 0:
-             #   self.Yaw_angle_queue.append((fcsg.header.stamp.to_nsec(),fcsg.axes[3]))
+        if int(fcsg.axes[4]) & 0b11000000 == 0x40:
+            self.Horizontal_velocity_queue.append((fcsg.header.stamp.to_nsec(),fcsg.axes[0],fcsg.axes[1]))
+        if int(fcsg.axes[4]) & 0b00110000 == 0x00:
+            self.Vertical_velocity_queue.append((fcsg.header.stamp.to_nsec(),fcsg.axes[2]))
+        if int(fcsg.axes[4]) & 0b00001100 == 0x00:
+            self.Yaw_angle_queue.append((fcsg.header.stamp.to_nsec(),fcsg.axes[3]))
         return
