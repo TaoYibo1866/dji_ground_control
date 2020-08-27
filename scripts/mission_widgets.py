@@ -80,9 +80,4 @@ class MissionTelemWidget(QFrame):
         self.telem_timer.timeout.connect(self.update)
 
     def update(self):
-        ibvs_fb = self.ros_bridge.ibvs_feedback_queue.read()
-        if ibvs_fb is not None:
-            self.x_label.setText("x[m]: {: 2.1f}".format(ibvs_fb[1]))
-            self.y_label.setText("y[m]: {: 2.1f}".format(ibvs_fb[2]))
-            self.z_label.setText("z[m]: {: 2.1f}".format(ibvs_fb[3]))
         return
