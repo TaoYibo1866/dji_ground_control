@@ -19,13 +19,13 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "republish_node");
     ros::NodeHandle n;
 
-    ros::Publisher loc_pos_pub = n.advertise<geometry_msgs::PointStamped>("/gc/loc_pos", 1);
-    ros::Publisher att_pub = n.advertise<geometry_msgs::QuaternionStamped>("/gc/att", 1);
-    ros::Publisher vel_pub = n.advertise<geometry_msgs::Vector3Stamped>("/gc/vel", 1);
-    ros::Publisher height_pub = n.advertise<std_msgs::Float32>("/gc/height", 1);
-    ros::Publisher acc_pub = n.advertise<geometry_msgs::Vector3Stamped>("/gc/acc", 1);
-    ros::Publisher gps_pos_pub = n.advertise<sensor_msgs::NavSatFix>("/gc/gps_pos", 1);
-    ros::Publisher ang_vel_pub = n.advertise<geometry_msgs::Vector3Stamped>("/gc/ang_vel", 1);
+    ros::Publisher loc_pos_pub = n.advertise<geometry_msgs::PointStamped>("/gc/local_position", 1);
+    ros::Publisher att_pub = n.advertise<geometry_msgs::QuaternionStamped>("/gc/attitude", 1);
+    ros::Publisher vel_pub = n.advertise<geometry_msgs::Vector3Stamped>("/gc/velocity", 1);
+    ros::Publisher height_pub = n.advertise<std_msgs::Float32>("/gc/height_above_takeoff", 1);
+    ros::Publisher acc_pub = n.advertise<geometry_msgs::Vector3Stamped>("/gc/acceleration_ground_fused", 1);
+    ros::Publisher gps_pos_pub = n.advertise<sensor_msgs::NavSatFix>("/gc/gps_position", 1);
+    ros::Publisher ang_vel_pub = n.advertise<geometry_msgs::Vector3Stamped>("/gc/angular_velocity_fused", 1);
     ros::Publisher gps_health_pub = n.advertise<std_msgs::UInt8>("/gc/gps_health", 1);
     ros::Publisher battery_state_pub = n.advertise<sensor_msgs::BatteryState>("/gc/battery_state", 1);
     ros::Publisher flight_status_pub = n.advertise<std_msgs::UInt8>("/gc/flight_status", 1);

@@ -60,15 +60,15 @@ class RosBridge:
         
         self.log_queue = Queue(10)
         
-        rospy.Subscriber('loc_pos', PointStamped, callback=self.loc_pos_cb, queue_size=1)
-        rospy.Subscriber('att', QuaternionStamped, callback=self.att_cb, queue_size=1)
-        rospy.Subscriber('vel', Vector3Stamped, callback=self.vel_cb, queue_size=1)
+        rospy.Subscriber('local_position', PointStamped, callback=self.loc_pos_cb, queue_size=1)
+        rospy.Subscriber('attitude', QuaternionStamped, callback=self.att_cb, queue_size=1)
+        rospy.Subscriber('velocity', Vector3Stamped, callback=self.vel_cb, queue_size=1)
 
-        rospy.Subscriber('height', Float32, callback=self.height_cb, queue_size=1) 
-        rospy.Subscriber('acc', Vector3Stamped, callback=self.acc_cb, queue_size=1)
+        rospy.Subscriber('height_above_takeoff', Float32, callback=self.height_cb, queue_size=1) 
+        rospy.Subscriber('acceleration_ground_fused', Vector3Stamped, callback=self.acc_cb, queue_size=1)
 
-        rospy.Subscriber('gps_pos', NavSatFix, callback=self.gps_pos_cb, queue_size=1)
-        rospy.Subscriber('ang_vel', Vector3Stamped, callback=self.ang_vel_cb, queue_size=1)
+        rospy.Subscriber('gps_position', NavSatFix, callback=self.gps_pos_cb, queue_size=1)
+        rospy.Subscriber('angular_velocity_fused', Vector3Stamped, callback=self.ang_vel_cb, queue_size=1)
 
         rospy.Subscriber('gps_health', UInt8, callback=self.gps_health_cb, queue_size=1)
         rospy.Subscriber('battery_state', BatteryState, callback=self.battery_state_cb, queue_size=1)
