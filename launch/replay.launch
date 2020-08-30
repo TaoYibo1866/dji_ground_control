@@ -1,8 +1,19 @@
 <launch>
     <arg name="gui" default="true"/>
-    <arg name="bag_name" default="demo_flight_control"/>
-    <node name="player" pkg="rosbag" type="play" args="$(find ground_control)/bags/$(arg bag_name).bag"/>
+    <arg name="image_view" default="false"/>
+    <arg name="bag_path" default="$(find ground_control)/bags/demo_flight_control.bag"/>
+    <node name="player" pkg="rosbag" type="play" args="$(arg bag_path)"/>
     <include file="$(find ground_control)/launch/ground_control.launch">
         <arg name="gui" value="$(arg gui)"/>
     </include>
+    <group if="$(arg image_view)">
+        <node name="camera0_view" pkg="image_view" type="image_view" args="image:=/camera0/image_raw">
+            <param name="image_transport" value="compressed"/>
+            <param name="autosize" value="true"/>
+        </node>
+        <node name="vision_view" pkg="image_view" type="image_view" args="image:=/vision/image_output">
+            <param name="image_transport" value="compressed"/>
+            <param name="autosize" value="true"/>
+        </node>
+    </group>
 </launch>

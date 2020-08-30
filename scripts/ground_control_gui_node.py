@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QGridLayout, QWidget
 
 from ros_bridge import RosBridge
 
-from widgets import LocusWidget, TelemWidget #, GenPlotWidget, TabWidget
+from widgets import TelemWidget, LocusWidget #, GenPlotWidget, TabWidget
 
 signal.signal(signal.SIGINT, signal.SIG_DFL) # press CTRL+C quit immediately without unregister rosnode
 
