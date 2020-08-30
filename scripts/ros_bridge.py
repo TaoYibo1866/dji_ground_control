@@ -52,18 +52,22 @@ class RosBridge:
         self.flight_status_queue = Queue(queue_size=1)
         self.rc_queue = Queue(queue_size=1)
         
-        rospy.Subscriber('/dji_sdk/local_position', PointStamped, callback=self.loc_pos_cb, queue_size=1)
-        rospy.Subscriber('/dji_sdk/attitude', QuaternionStamped, callback=self.att_cb, queue_size=1)
-        rospy.Subscriber('/dji_sdk/velocity', Vector3Stamped, callback=self.vel_cb, queue_size=1)
-        rospy.Subscriber('/dji_sdk/height_above_takeoff', Float32, callback=self.height_cb, queue_size=1) 
-        rospy.Subscriber('/dji_sdk/acceleration_ground_fused', Vector3Stamped, callback=self.acc_cb, queue_size=1)
-        rospy.Subscriber('/dji_sdk/gps_position', NavSatFix, callback=self.gps_pos_cb, queue_size=1)
-        rospy.Subscriber('/dji_sdk/angular_velocity_fused', Vector3Stamped, callback=self.ang_vel_cb, queue_size=1)
-        rospy.Subscriber('/dji_sdk/gps_health', UInt8, callback=self.gps_health_cb, queue_size=1)
-        rospy.Subscriber('/dji_sdk/battery_state', BatteryState, callback=self.battery_state_cb, queue_size=1)
-        rospy.Subscriber('/dji_sdk/flight_status', UInt8, callback=self.flight_status_cb, queue_size=1)
-        rospy.Subscriber('/dji_sdk/rc', Joy, callback=self.rc_cb, queue_size=1)
-        rospy.Subscriber('/dji_sdk/flight_control_setpoint_generic', Joy, callback=self.flight_ctrl_sp_gen_cb, queue_size=1)
+        rospy.Subscriber('local_position', PointStamped, callback=self.loc_pos_cb, queue_size=1)
+        rospy.Subscriber('attitude', QuaternionStamped, callback=self.att_cb, queue_size=1)
+        rospy.Subscriber('velocity', Vector3Stamped, callback=self.vel_cb, queue_size=1)
+
+        rospy.Subscriber('height_above_takeoff', Float32, callback=self.height_cb, queue_size=1) 
+        rospy.Subscriber('acceleration_ground_fused', Vector3Stamped, callback=self.acc_cb, queue_size=1)
+
+        rospy.Subscriber('gps_position', NavSatFix, callback=self.gps_pos_cb, queue_size=1)
+        rospy.Subscriber('angular_velocity_fused', Vector3Stamped, callback=self.ang_vel_cb, queue_size=1)
+
+        rospy.Subscriber('gps_health', UInt8, callback=self.gps_health_cb, queue_size=1)
+        rospy.Subscriber('battery_state', BatteryState, callback=self.battery_state_cb, queue_size=1)
+        rospy.Subscriber('flight_status', UInt8, callback=self.flight_status_cb, queue_size=1)
+        rospy.Subscriber('rc', Joy, callback=self.rc_cb, queue_size=1)
+
+        rospy.Subscriber('flight_control_setpoint_generic', Joy, callback=self.flight_ctrl_sp_gen_cb, queue_size=1)
 
 
     def loc_pos_cb(self, pos):
