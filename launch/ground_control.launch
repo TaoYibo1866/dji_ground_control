@@ -1,6 +1,6 @@
 <launch>
     <arg name="gui" default="true"/>
-    <group if="$(arg gui)">
+    <group if="$(arg gui)" ns="dji_sdk">
         <node name="gui" pkg="ground_control" type="ground_control_gui_node.py" output="screen" />
     </group>
     <node name="joy" pkg="joy" type="joy_node" ns="gc" />

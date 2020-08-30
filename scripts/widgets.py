@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 import sys; sys.dont_write_bytecode = True
 
-from PyQt5.QtWidgets import QGridLayout, QLabel, QFrame, QComboBox, QPushButton, QTabWidget
+from PyQt5.QtWidgets import QGridLayout, QVBoxLayout, QLabel, QFrame, QPushButton, QTabWidget, QRadioButton, QButtonGroup
 from PyQt5.QtCore import Qt, QTimer
 import pyqtgraph as pg
 #from mem_top import mem_top
@@ -55,20 +55,84 @@ class TabWidget(QTabWidget):
         self.currentWidget().update()
         return
 
+class CurveConfigWidget(QFrame):
+    def __init__(self, parent, idx):
+        QFrame.__init__(self)
+        layout = QVBoxLayout(self)
+
+        g0_rb0 = QRadioButton("位置E")
+        g0_rb1 = QRadioButton("位置N")
+        g0_rb2 = QRadioButton("位置U")
+        g0_rb3 = QRadioButton("速度E")
+        g0_rb4 = QRadioButton("速度N")
+        g0_rb5 = QRadioButton("速度U")
+        g0_rb6 = QRadioButton("滚转角")
+        g0_rb7 = QRadioButton("俯仰角")
+        g0_rb8 = QRadioButton("偏航角")
+
+        g1_rb0 = QRadioButton("red")
+        g1_rb1 = QRadioButton("green")
+        g1_rb2 = QRadioButton("blue")
+
+        self.group0 = QButtonGroup()
+        self.group0.addButton(g0_rb0, 0)
+        self.group0.addButton(g0_rb1, 1)
+        self.group0.addButton(g0_rb2, 2)
+        self.group0.addButton(g0_rb3, 3)
+        self.group0.addButton(g0_rb4, 4)
+        self.group0.addButton(g0_rb5, 5)
+        self.group0.addButton(g0_rb6, 6)
+        self.group0.addButton(g0_rb7, 7)
+        self.group0.addButton(g0_rb8, 8)
+
+        self.group1 = QButtonGroup()
+        self.group1.addButton(g1_rb0, 0)
+        self.group1.addButton(g1_rb1, 1)
+        self.group1.addButton(g1_rb2, 2)
+
+        group0_layout = QGridLayout()
+        group0_layout.addWidget(g0_rb0, 0, 0)
+        group0_layout.addWidget(g0_rb1, 0, 1)
+        group0_layout.addWidget(g0_rb2, 0, 2)
+        group0_layout.addWidget(g0_rb3, 1, 0)
+        group0_layout.addWidget(g0_rb4, 1, 1)
+        group0_layout.addWidget(g0_rb5, 1, 2)
+        group0_layout.addWidget(g0_rb6, 2, 0)
+        group0_layout.addWidget(g0_rb7, 2, 1)
+        group0_layout.addWidget(g0_rb8, 2, 2)
+
+        group1_layout = QGridLayout()
+        group1_layout.addWidget(g1_rb0, 0, 0)
+        group1_layout.addWidget(g1_rb1, 0, 1)
+        group1_layout.addWidget(g1_rb2, 0, 2)
+
+        enter_button = QPushButton("确认")
+        enter_button.clicked.connect(lambda: self.enter(parent, idx))
+        enter_button.clicked.connect(self.close)
+
+        layout.addLayout(group0_layout, 0)
+        layout.addLayout(group1_layout, 1)
+        layout.addWidget(enter_button, 2)
+    def enter(self, parent, idx):
+        if self.group0.checkedId() < 0 and self.group1.checkedId() < 0:
+            pass
+        else:
+            parent.curve_buttons[idx].setText(self.group0.checkedButton().text())
+            parent.curve_buttons[idx].setStyleSheet("color: {};".format(self.group1.checkedButton().text()))
+
+
 class GenPlotWidget(QFrame):
     def __init__(self, ros_bridge, quan=0, axis=0):
         QFrame.__init__(self)
         self.ros_bridge = ros_bridge
         self.layout = QGridLayout(self)
+        self.curve_config_widget = None
 
         #plot widget
-        self.scope_label = QLabel()
         self.plot_widget = pg.GraphicsLayoutWidget()
-        self.quan_combo = QComboBox()
-        self.axis_combo = QComboBox()
-        self.enter_button = QPushButton()
-
-        self.scope_label.setAlignment(Qt.AlignCenter)
+        self.curve0_button = QPushButton("曲线0")
+        self.curve1_button = QPushButton("曲线1")
+        self.stop_button = ToggleButton(["暂停", "绘制"], self)
 
         self.plot = self.plot_widget.addPlot(row=0, col=0)
         self.plot.setXRange(0, 20)
@@ -76,68 +140,39 @@ class GenPlotWidget(QFrame):
         self.plot.showAxis('right')
         self.plot.showAxis('top')
 
-        self.curve = pg.PlotCurveItem()
-        self.plot.addItem(self.curve)
+        self.curve0 = pg.PlotCurveItem()
+        self.curve1 = pg.PlotCurveItem()
+        self.plot.addItem(self.curve0)
+        self.plot.addItem(self.curve1)
 
-        self.quan_combo.addItems(['Velocity_ENU',
-                                  'Local_Position',
-                                  'Attitude'])
-        self.axis_combo.addItems(['X', 'Y', 'Z'])
-        
-        self.quan_combo.setCurrentIndex(quan)
-        self.axis_combo.setCurrentIndex(axis)
-
-        self.enter_button.setText('Enter')
-        self.enter_button.clicked.connect(self.switch_case)
-
-        self.stop_button = ToggleButton(["暂停", "绘制"], self)
+        self.curve0_button.clicked.connect(lambda: self.config_curve(0))
+        self.curve1_button.clicked.connect(lambda: self.config_curve(1))
         self.stop_button.clicked.connect(self.stop)
 
-        self.case = [self.quan_combo.currentIndex(), self.axis_combo.currentIndex()]
-        self.scope_label.setText("{}->{}".format(self.quan_combo.currentText(), self.axis_combo.currentText()))
+        self.layout.addWidget(self.plot_widget, 0, 0, 1, 3)
+        self.layout.addWidget(self.curve0_button, 1, 0, 1, 1)
+        self.layout.addWidget(self.curve1_button, 1, 1, 1, 1)
+        self.layout.addWidget(self.stop_button, 1, 2, 1, 1)
 
-        self.layout.addWidget(self.scope_label, 0, 0, 1, 4)
-        self.layout.addWidget(self.plot_widget, 1, 0, 1, 4)
-        self.layout.addWidget(self.quan_combo, 2, 0, 1, 1)
-        self.layout.addWidget(self.axis_combo, 2, 1, 1, 1)
-        self.layout.addWidget(self.enter_button, 2, 2, 1, 1)
-        self.layout.addWidget(self.stop_button, 2, 3, 1, 1)
+        self.curves = [self.curve0, self.curve1]
+        self.curve_buttons = [self.curve0_button, self.curve1_button]
+        self.curve_configs = [(0, 0), (1, 2)]
 
         self.timer = QTimer()
         self.timer.start(100)
         self.timer.timeout.connect(self.update)
 
     def update(self):
-        if self.stop_button.state == 1:
-            return
-        quan, axis = self.case
-        if quan == 0:
-            if axis == 0:
-                self.plot_curve(self.curve, self.ros_bridge.velocity_queue.copy(), 0, 1, pg.mkPen('r', width=2), (255,0,0,70))
-            elif axis == 1:
-                self.plot_curve(self.curve, self.ros_bridge.velocity_queue.copy(), 0, 2, pg.mkPen('g', width=2), (0,255,0,70))
-            elif axis == 2:
-                self.plot_curve(self.curve, self.ros_bridge.velocity_queue.copy(), 0, 3, pg.mkPen('b', width=2), (0,0,255,70))
-        elif quan == 1:
-            if axis == 0:
-                self.plot_curve(self.curve, self.ros_bridge.local_position_queue.copy(), 0, 1, pg.mkPen('r', width=2), (255,0,0,70))
-            elif axis == 1:
-                self.plot_curve(self.curve, self.ros_bridge.local_position_queue.copy(), 0, 2, pg.mkPen('g', width=2), (0,255,0,70))
-            elif axis == 2:
-                self.plot_curve(self.curve, self.ros_bridge.local_position_queue.copy(), 0, 3, pg.mkPen('b', width=2), (0,0,255,70))
-        elif quan == 2:
-            if axis == 0:
-                self.plot_curve(self.curve, self.ros_bridge.attitude_queue.copy(), 0, -3, pg.mkPen('r', width=2), (255,0,0,70))
-            elif axis == 1:
-                self.plot_curve(self.curve, self.ros_bridge.attitude_queue.copy(), 0, -2, pg.mkPen('g', width=2), (0,255,0,70))
-            elif axis == 2:
-                self.plot_curve(self.curve, self.ros_bridge.attitude_queue.copy(), 0, -1, pg.mkPen('b', width=2), (0,0,255,70))
         return
 
-    def switch_case(self, _):
-        self.case = [self.quan_combo.currentIndex(), self.axis_combo.currentIndex()]
-        self.scope_label.setText("{}->{}".format(self.quan_combo.currentText(), self.axis_combo.currentText()))
+    def config_curve(self, idx):
+        if self.curve_config_widget is None or not self.curve_config_widget.isVisible():
+            self.curve_config_widget = CurveConfigWidget(self, idx)
+            self.curve_config_widget.show()
     
+    def switch_case(self, val):
+        print(val)
+
     def plot_curve(self, curve, queue, x, y, pen, brush):
         if queue is not None:
             ts, val = split(queue, [x, y])
@@ -155,7 +190,112 @@ class GenPlotWidget(QFrame):
         elif self.stop_button.state == 1:
             self.stop_button.state = 0
             self.stop_button.setText(self.stop_button.text[0])
-        return 
+        return
+
+# class GenPlotWidget(QFrame):
+#     def __init__(self, ros_bridge, quan=0, axis=0):
+#         QFrame.__init__(self)
+#         self.ros_bridge = ros_bridge
+#         self.layout = QGridLayout(self)
+
+#         #plot widget
+#         self.scope_label = QLabel()
+#         self.plot_widget = pg.GraphicsLayoutWidget()
+#         self.quan_combo = QComboBox()
+#         self.axis_combo = QComboBox()
+#         self.enter_button = QPushButton()
+
+#         self.scope_label.setAlignment(Qt.AlignCenter)
+
+#         self.plot = self.plot_widget.addPlot(row=0, col=0)
+#         self.plot.setXRange(0, 20)
+#         self.plot.showGrid(x=1, y=1)
+#         self.plot.showAxis('right')
+#         self.plot.showAxis('top')
+
+#         self.curve = pg.PlotCurveItem()
+#         self.plot.addItem(self.curve)
+
+#         self.quan_combo.addItems(['Velocity_ENU',
+#                                   'Local_Position',
+#                                   'Attitude'])
+#         self.axis_combo.addItems(['X', 'Y', 'Z'])
+        
+#         self.quan_combo.setCurrentIndex(quan)
+#         self.axis_combo.setCurrentIndex(axis)
+
+#         self.enter_button.setText('Enter')
+#         self.enter_button.clicked.connect(self.switch_case)
+
+#         self.stop_button = ToggleButton(["暂停", "绘制"], self)
+#         self.stop_button.clicked.connect(self.stop)
+
+#         self.case = [self.quan_combo.currentIndex(), self.axis_combo.currentIndex()]
+#         self.scope_label.setText("{}->{}".format(self.quan_combo.currentText(), self.axis_combo.currentText()))
+
+#         self.layout.addWidget(self.scope_label, 0, 0, 1, 4)
+#         self.layout.addWidget(self.plot_widget, 1, 0, 1, 4)
+#         self.layout.addWidget(self.quan_combo, 2, 0, 1, 1)
+#         self.layout.addWidget(self.axis_combo, 2, 1, 1, 1)
+#         self.layout.addWidget(self.enter_button, 2, 2, 1, 1)
+#         self.layout.addWidget(self.stop_button, 2, 3, 1, 1)
+
+#         self.timer = QTimer()
+#         self.timer.start(100)
+#         self.timer.timeout.connect(self.update)
+
+#     def update(self):
+#         if self.stop_button.state == 1:
+#             return
+#         quan, axis = self.case
+#         if quan == 0:
+#             if axis == 0:
+#                 self.plot_curve(self.curve, self.ros_bridge.velocity_queue.copy(), 0, 1, pg.mkPen('r', width=2), (255,0,0,70))
+#             elif axis == 1:
+#                 self.plot_curve(self.curve, self.ros_bridge.velocity_queue.copy(), 0, 2, pg.mkPen('g', width=2), (0,255,0,70))
+#             elif axis == 2:
+#                 self.plot_curve(self.curve, self.ros_bridge.velocity_queue.copy(), 0, 3, pg.mkPen('b', width=2), (0,0,255,70))
+#         elif quan == 1:
+#             if axis == 0:
+#                 self.plot_curve(self.curve, self.ros_bridge.local_position_queue.copy(), 0, 1, pg.mkPen('r', width=2), (255,0,0,70))
+#             elif axis == 1:
+#                 self.plot_curve(self.curve, self.ros_bridge.local_position_queue.copy(), 0, 2, pg.mkPen('g', width=2), (0,255,0,70))
+#             elif axis == 2:
+#                 self.plot_curve(self.curve, self.ros_bridge.local_position_queue.copy(), 0, 3, pg.mkPen('b', width=2), (0,0,255,70))
+#         elif quan == 2:
+#             if axis == 0:
+#                 self.plot_curve(self.curve, self.ros_bridge.attitude_queue.copy(), 0, -3, pg.mkPen('r', width=2), (255,0,0,70))
+#             elif axis == 1:
+#                 self.plot_curve(self.curve, self.ros_bridge.attitude_queue.copy(), 0, -2, pg.mkPen('g', width=2), (0,255,0,70))
+#             elif axis == 2:
+#                 self.plot_curve(self.curve, self.ros_bridge.attitude_queue.copy(), 0, -1, pg.mkPen('b', width=2), (0,0,255,70))
+#         return
+
+#     def switch_case(self, _):
+#         self.case = [self.quan_combo.currentIndex(), self.axis_combo.currentIndex()]
+#         self.scope_label.setText("{}->{}".format(self.quan_combo.currentText(), self.axis_combo.currentText()))
+#         self.cl = CheckListWidget(self)
+#         self.cl.show()
+#         print('a')
+    
+#     def plot_curve(self, curve, queue, x, y, pen, brush):
+#         if queue is not None:
+#             ts, val = split(queue, [x, y])
+#             ts = np.asarray(ts, np.uint64)
+#             val = np.asarray(val, np.float32)
+#             idx = find_nearest(ts, ts[-1] - 20 * 10**9)
+#             t = (ts[idx:] - ts[idx]) * 10**-9
+#             curve.setData(t, val[idx:], pen=pen, brush=brush, fillLevel=0)
+#         return
+    
+#     def stop(self):
+#         if self.stop_button.state == 0:
+#             self.stop_button.state = 1
+#             self.stop_button.setText(self.stop_button.text[1])
+#         elif self.stop_button.state == 1:
+#             self.stop_button.state = 0
+#             self.stop_button.setText(self.stop_button.text[0])
+#         return
 
 class LocusWidget(QFrame):
     def __init__(self, ros_bridge):
