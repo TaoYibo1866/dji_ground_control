@@ -8,9 +8,9 @@ import pyqtgraph as pg
 #from mem_top import mem_top
 import numpy as np
 from tf.transformations import rotation_matrix
-import math
-
 from mission_widgets import VisionWidget, MissionTelemWidget
+
+# from mission_widgets import VisionWidget, MissionTelemWidget
 
 def find_nearest(array, value):
     array = np.asarray(array)
@@ -161,7 +161,6 @@ class GenPlotWidget(QFrame):
         self.timer = QTimer()
         self.timer.start(100)
         self.timer.timeout.connect(self.update)
-
     def update(self):
         return
 
@@ -339,7 +338,7 @@ class LocusWidget(QFrame):
             self.locus_scatter.setData([-n[-1]], [e[-1]], pen=pg.mkPen('g', width=2))
             
             yaw = attitude[-1]
-            arrow = self.calc_arrow(x=-n[-1], y=e[-1], yaw=yaw * math.pi / 180)
+            arrow = self.calc_arrow(x=-n[-1], y=e[-1], yaw=yaw * np.pi / 180)
             self.locus_arrow.setData(arrow[0,:], arrow[1,:], pen=pg.mkPen('r', width=2))
         
         return
@@ -384,7 +383,7 @@ class TelemWidget(QFrame):
         self.battery_state_current_label = QLabel("电流[A]:")
         self.battery_state_percentage_label = QLabel("百分比[%]:")
         self.flight_status_label = QLabel("飞行模式:")
-        self.rc_axes0_label = QLabel("滚转通道:")
+        self.rc_axes0_label = QLabel("滚动通道:")
         self.rc_axes1_label = QLabel("俯仰通道:")
         self.rc_axes2_label = QLabel("偏航通道:")
         self.rc_axes3_label = QLabel("推力通道:")
@@ -508,7 +507,7 @@ class TelemWidget(QFrame):
 
         gps_health = self.ros_bridge.gps_health_queue.read()
         if gps_health is not None:
-            self.gps_health_label.setText("GPS强度: {}".format(gps_health))
+            self.gps_health_label.setText("GPS等级: {}".format(gps_health))
         
         battery_state = self.ros_bridge.battery_state_queue.read()
         if battery_state is not None:
