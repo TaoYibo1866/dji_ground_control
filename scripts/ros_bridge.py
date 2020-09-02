@@ -9,10 +9,8 @@ import rospy
 from geometry_msgs.msg import PointStamped, QuaternionStamped, Vector3Stamped
 from std_msgs.msg import Float32, UInt8
 from sensor_msgs.msg import NavSatFix, BatteryState, Joy
-from tian_gong_zhu_ta_msgs.msg import IBVSActionFeedback
 from tf.transformations import euler_from_quaternion
 import math
-import numpy as np
 
 class Queue:
     def __init__(self, queue_size=1):
@@ -33,7 +31,7 @@ class Queue:
     def copy(self):
         if not self.data:
             return None
-        return copy.deepcopy(self.data)
+        return copy.copy(self.data)
 
 class RosBridge:
     def __init__(self):
@@ -41,44 +39,31 @@ class RosBridge:
         self.attitude_queue = Queue(queue_size=2000) # 100Hz
         self.velocity_queue = Queue(queue_size=1000) # 50Hz
 
-        self.height_queue = Queue(queue_size=150)
-        self.acceleration_queue = Queue(queue_size=150)
-        
-        self.gps_position_queue = Queue(queue_size=150)
-        self.angular_velocity_queue = Queue(queue_size=150)
-        
-        self.gps_health_queue = Queue(queue_size=150)
-        self.battery_state_queue = Queue(queue_size=150)
-        self.flight_status_queue = Queue(queue_size=150)
-        self.rc_queue = Queue(queue_size=150)
+        self.cmd_horiz_vel_queue = Queue(queue_size=1000)
+        self.cmd_vert_vel_queue = Queue(queue_size=1000)
+        self.cmd_yaw_queue = Queue(queue_size=1000)
 
-        self.ibvs_feedback_queue = Queue(queue_size=600)
+        self.height_queue = Queue(queue_size=1)
+        self.acceleration_queue = Queue(queue_size=1)
+        self.gps_position_queue = Queue(queue_size=1)
+        self.angular_velocity_queue = Queue(queue_size=1)
+        self.gps_health_queue = Queue(queue_size=1)
+        self.battery_state_queue = Queue(queue_size=1)
+        self.flight_status_queue = Queue(queue_size=1)
+        self.rc_queue = Queue(queue_size=1)
 
-        self.Horizontal_velocity_queue = Queue(queue_size=600)
-        self.Vertical_velocity_queue = Queue(queue_size=600)
-        self.Yaw_angle_queue = Queue(queue_size=600)
-        
-        self.log_queue = Queue(10)
-        
         rospy.Subscriber('local_position', PointStamped, callback=self.loc_pos_cb, queue_size=1)
         rospy.Subscriber('attitude', QuaternionStamped, callback=self.att_cb, queue_size=1)
         rospy.Subscriber('velocity', Vector3Stamped, callback=self.vel_cb, queue_size=1)
-
         rospy.Subscriber('height_above_takeoff', Float32, callback=self.height_cb, queue_size=1) 
         rospy.Subscriber('acceleration_ground_fused', Vector3Stamped, callback=self.acc_cb, queue_size=1)
-
         rospy.Subscriber('gps_position', NavSatFix, callback=self.gps_pos_cb, queue_size=1)
         rospy.Subscriber('angular_velocity_fused', Vector3Stamped, callback=self.ang_vel_cb, queue_size=1)
-
         rospy.Subscriber('gps_health', UInt8, callback=self.gps_health_cb, queue_size=1)
         rospy.Subscriber('battery_state', BatteryState, callback=self.battery_state_cb, queue_size=1)
         rospy.Subscriber('flight_status', UInt8, callback=self.flight_status_cb, queue_size=1)
         rospy.Subscriber('rc', Joy, callback=self.rc_cb, queue_size=1)
-
-        rospy.Subscriber('ibvs_fb', IBVSActionFeedback, callback=self.ibvs_fb_cb, queue_size=1)
-
-        rospy.Subscriber('flight_control_setpoint_generic', Joy, callback=self.flight_control_setpoint_generic_cb, queue_size=1)
-
+        rospy.Subscriber('flight_control_setpoint_generic', Joy, callback=self.flight_ctrl_sp_gen_cb, queue_size=1)
 
     def loc_pos_cb(self, pos):
         self.local_position_queue.append((pos.header.stamp.to_nsec(), pos.point.x, pos.point.y, pos.point.z))
@@ -88,7 +73,7 @@ class RosBridge:
         q_i2b=[att.quaternion.x, att.quaternion.y, att.quaternion.z, att.quaternion.w]
         yaw, pitch, roll = euler_from_quaternion(q_i2b, axes='rzyx')
         roll = roll * 180 / math.pi
-        pitch =pitch *180 / math.pi
+        pitch = pitch * 180 / math.pi
         yaw = yaw * 180 / math.pi
         self.attitude_queue.append((att.header.stamp.to_nsec(), att.quaternion.x, att.quaternion.y, att.quaternion.z, att.quaternion.w, roll, pitch, yaw))
         return
@@ -128,19 +113,12 @@ class RosBridge:
     def rc_cb(self, rc):
         self.rc_queue.append((rc.header.stamp.to_nsec(), rc.axes[0], rc.axes[1],rc.axes[2],rc.axes[3],rc.axes[4],rc.axes[5]))
         return
-
-    def ibvs_fb_cb(self, fb):
-        self.ibvs_feedback_queue.append((fb.header.stamp.to_nsec(),
-                                         fb.feedback.pose.position.x,
-                                         fb.feedback.pose.position.y,
-                                         fb.feedback.pose.position.z))
-        return
     
-    def flight_control_setpoint_generic_cb(self, fcsg):
+    def flight_ctrl_sp_gen_cb(self, fcsg):
         if int(fcsg.axes[4]) & 0b11000000 == 0x40:
-            self.Horizontal_velocity_queue.append((fcsg.header.stamp.to_nsec(),fcsg.axes[0],fcsg.axes[1]))
+            self.cmd_horiz_vel_queue.append((fcsg.header.stamp.to_nsec(),fcsg.axes[0],fcsg.axes[1]))
         if int(fcsg.axes[4]) & 0b00110000 == 0x00:
-            self.Vertical_velocity_queue.append((fcsg.header.stamp.to_nsec(),fcsg.axes[2]))
+            self.cmd_vert_vel_queue.append((fcsg.header.stamp.to_nsec(),fcsg.axes[2]))
         if int(fcsg.axes[4]) & 0b00001100 == 0x00:
-            self.Yaw_angle_queue.append((fcsg.header.stamp.to_nsec(),fcsg.axes[3]))
+            self.cmd_yaw_queue.append((fcsg.header.stamp.to_nsec(),fcsg.axes[3]))
         return
