@@ -28,9 +28,9 @@ class TabWidget(QTabWidget):
     def __init__(self, ros_bridge):
         QTabWidget.__init__(self)
         
-        self.plot_widget_0 = GenPlotWidget(ros_bridge, 0, 0)
-        self.plot_widget_1 = GenPlotWidget(ros_bridge, 0, 1)
-        self.plot_widget_2 = GenPlotWidget(ros_bridge, 0, 2)
+        self.plot_widget_0 = GenPlotWidget(ros_bridge, (0, 0, (255,0,0,70)), (1, 1, (0,255,0,70)))
+        self.plot_widget_1 = GenPlotWidget(ros_bridge, (0, 0, (255,0,0,70)), (1, 1, (0,255,0,70)))
+        self.plot_widget_2 = GenPlotWidget(ros_bridge, (0, 0, (255,0,0,70)), (1, 1, (0,255,0,70)))
         self.vision_widget = VisionWidget(ros_bridge)
         self.mission_telem_widget = MissionTelemWidget(ros_bridge)
 
@@ -74,7 +74,7 @@ class CurveConfigWidget(QFrame):
         g1_rb1 = QRadioButton("green")
         g1_rb2 = QRadioButton("blue")
 
-        self.group0 = QButtonGroup()
+        self.group0 = QButtonGroup(self)
         self.group0.addButton(g0_rb0, 0)
         self.group0.addButton(g0_rb1, 1)
         self.group0.addButton(g0_rb2, 2)
@@ -85,7 +85,7 @@ class CurveConfigWidget(QFrame):
         self.group0.addButton(g0_rb7, 7)
         self.group0.addButton(g0_rb8, 8)
 
-        self.group1 = QButtonGroup()
+        self.group1 = QButtonGroup(self)
         self.group1.addButton(g1_rb0, 0)
         self.group1.addButton(g1_rb1, 1)
         self.group1.addButton(g1_rb2, 2)
@@ -105,7 +105,7 @@ class CurveConfigWidget(QFrame):
         group1_layout.addWidget(g1_rb0, 0, 0)
         group1_layout.addWidget(g1_rb1, 0, 1)
         group1_layout.addWidget(g1_rb2, 0, 2)
-
+    
         enter_button = QPushButton("确认")
         enter_button.clicked.connect(lambda: self.enter(parent, idx))
         enter_button.clicked.connect(self.close)
@@ -117,12 +117,22 @@ class CurveConfigWidget(QFrame):
         if self.group0.checkedId() < 0 and self.group1.checkedId() < 0:
             pass
         else:
+            xian = self.group0.checkedId()
+            color = self.group1.checkedId()
+            rgb = None
+            if color == 0:
+                rgb = (255,0,0,70)
+            elif color == 1:
+                rgb = (0,255,0,70)
+            elif color == 2:
+                rgb = (0,0,255,70)
+            parent.curve_configs[idx] = (xian, color, rgb)    
             parent.curve_buttons[idx].setText(self.group0.checkedButton().text())
-            parent.curve_buttons[idx].setStyleSheet("color: {};".format(self.group1.checkedButton().text()))
+            parent.curve_buttons[idx].setStyleSheet("color: {};".format(self.group1.checkedButton().text()))  
 
 
 class GenPlotWidget(QFrame):
-    def __init__(self, ros_bridge):
+    def __init__(self, ros_bridge, curve0_config=(0, 0, (255,0,0,70)), curve1_config=(1, 1, (0,255,0,70))):
         QFrame.__init__(self)
         self.ros_bridge = ros_bridge
         self.layout = QGridLayout(self)
@@ -135,7 +145,7 @@ class GenPlotWidget(QFrame):
         self.stop_button = ToggleButton(["暂停", "绘制"], self)
 
         self.plot = self.plot_widget.addPlot(row=0, col=0)
-        self.plot.setXRange(0, 20)
+        #self.plot.setXRange(0, 20)
         self.plot.showGrid(x=1, y=1)
         self.plot.showAxis('right')
         self.plot.showAxis('top')
@@ -156,37 +166,68 @@ class GenPlotWidget(QFrame):
 
         self.curves = [self.curve0, self.curve1]
         self.curve_buttons = [self.curve0_button, self.curve1_button]
-        self.curve_configs = [(0, 0), (1, 2)]
+        self.curve_configs = [curve0_config, curve1_config]
+        
 
         self.timer = QTimer()
         self.timer.start(100)
         self.timer.timeout.connect(self.update)
     def update(self):
+        num = 2
+        flag = self.stop_button.flag
+        plot_parameter = [[] for i in range(num)]
+        if flag == 0:
+            for i in range(num):
+                kind = self.curve_configs[i][0]
+                ts, val = self.switch_case(kind)
+                plot_parameter[i] = (ts, val, self.curve_configs[i][1],self.curve_configs[i][-1])
+            self.plot_curve(self.curves, plot_parameter)
         return
+    
+    def switch_case(self, kind):
+        switcher = {
+            0:split(self.ros_bridge.local_position_queue.copy(), [0, 1]),
+            1:split(self.ros_bridge.local_position_queue.copy(), [0, 2]),
+            2:split(self.ros_bridge.local_position_queue.copy(), [0, 3]),
+            3:split(self.ros_bridge.velocity_queue.copy(), [0, 1]),
+            4:split(self.ros_bridge.velocity_queue.copy(), [0, 2]),
+            5:split(self.ros_bridge.velocity_queue.copy(), [0, 3]),
+            6:split(self.ros_bridge.attitude_queue.copy(), [0, -3]),
+            7:split(self.ros_bridge.attitude_queue.copy(), [0, -2]),
+            8:split(self.ros_bridge.attitude_queue.copy(), [0, -1]),
+        }
+        return switcher[kind]
 
     def config_curve(self, idx):
         if self.curve_config_widget is None or not self.curve_config_widget.isVisible():
             self.curve_config_widget = CurveConfigWidget(self, idx)
             self.curve_config_widget.show()
-    
-    def switch_case(self, val):
-        print(val)
 
-    def plot_curve(self, curve, queue, x, y, pen, brush):
-        if queue is not None:
-            ts, val = split(queue, [x, y])
-            ts = np.asarray(ts, np.uint64)
-            val = np.asarray(val, np.float32)
-            idx = find_nearest(ts, ts[-1] - 20 * 10**9)
-            t = (ts[idx:] - ts[idx]) * 10**-9
-            curve.setData(t, val[idx:], pen=pen, brush=brush, fillLevel=0)
+    def plot_curve(self, curve, queue):
+        if queue is not None: 
+            ts_sta = np.asarray(queue[0][0], np.uint64)
+            idx_sta = find_nearest(ts_sta, ts_sta[-1] - 20 * 10**9)
+            for i in [0,1]:
+                ts = np.asarray(queue[i][0], np.uint64)
+                val = np.asarray(queue[i][1], np.float32)
+                idx = find_nearest(ts, ts[-1] - 20 * 10**9)
+                t = (ts[idx:] - ts[idx_sta]) * 10**-9
+                pen = queue[i][2]
+                if pen == 0: 
+                    curve[i].setData(t, val[idx:], pen=pg.mkPen('r', width=2), brush=queue[i][3], fillLevel=0)
+                elif pen == 1:
+                    curve[i].setData(t, val[idx:], pen=pg.mkPen('g', width=2), brush=queue[i][3], fillLevel=0)
+                elif pen == 2:
+                    curve[i].setData(t, val[idx:], pen=pg.mkPen('b', width=2), brush=queue[i][3], fillLevel=0)
         return
     
     def stop(self):
         if self.stop_button.state == 0:
+            self.stop_button.flag=1
             self.stop_button.state = 1
             self.stop_button.setText(self.stop_button.text[1])
         elif self.stop_button.state == 1:
+            self.stop_button.flag=0
             self.stop_button.state = 0
             self.stop_button.setText(self.stop_button.text[0])
         return
@@ -234,8 +275,8 @@ class LocusWidget(QFrame):
             
             yaw = attitude[-1]
             arrow = self.calc_arrow(x=-n[-1], y=e[-1], yaw=yaw * np.pi / 180)
-            self.locus_arrow.setData(arrow[0,:], arrow[1,:], pen=pg.mkPen('r', width=2))
-        
+            self.locus_arrow.setData(arrow[0,:], arrow[1,:], pen=pg.mkPen('r', width=2))   
+
         return
     
     def calc_arrow(self, x=0, y=0, yaw=0):
@@ -433,3 +474,4 @@ class ToggleButton(QPushButton):
         QPushButton.__init__(self, text[0], _self)
         self.text = text
         self.state = 0
+        self.flag = 0
