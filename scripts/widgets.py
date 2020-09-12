@@ -225,7 +225,7 @@ class LocusWidget(QFrame):
     def update(self):
         local_position_queue = self.ros_bridge.local_position_queue.copy()
         attitude = self.ros_bridge.attitude_queue.read()
-        if local_position_queue is not None and attitude is not None:
+        if len(local_position_queue) != 0 and attitude is not None:
             e, n = split(local_position_queue, [1, 2])
             e = np.asarray(e, np.float32)
             n = np.asarray(n, np.float32)
