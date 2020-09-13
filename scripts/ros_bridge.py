@@ -3,8 +3,8 @@
 import sys; sys.dont_write_bytecode = True
 
 from collections import deque
-import copy
-from threading import Event
+from copy import copy
+from threading import Condition, Lock
 import rospy
 from geometry_msgs.msg import PointStamped, QuaternionStamped, Vector3Stamped
 from std_msgs.msg import Float32, UInt8
@@ -14,24 +14,30 @@ import math
 
 class Queue:
     def __init__(self, queue_size=1):
-        self.data = deque(maxlen=queue_size) # this deque is already thread-safe
-        self.update_event = Event()
+        self._flag = False
+        self._data = deque(maxlen=queue_size)
+        self._cond = Condition(Lock())
     def append(self, item):
-        self.data.append(item)
-        self.update_event.set()
+        with self._cond:
+            self._data.append(item)
+            self._flag = True
+            self._cond.notify_all()
     def wait(self, timeout=0.1):
-        self.update_event.clear()
-        return self.update_event.wait(timeout)
+        with self._cond:
+            self._flag = False
+            self._cond.wait(timeout)
+            return self._flag
     def read(self):
-        if not self.data:
-            return None
-        return self.data[-1]
+        with self._cond:
+            if not self._data:
+                return None
+            return self._data[-1]
     def clear(self):
-        self.data.clear()
+        with self._cond:
+            self._data.clear()
     def copy(self):
-        if not self.data:
-            return None
-        return copy.copy(self.data)
+        with self._cond:
+            return copy(self._data)
 
 class RosBridge:
     def __init__(self):
