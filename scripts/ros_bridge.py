@@ -6,10 +6,11 @@ from collections import deque
 from copy import copy
 from threading import Condition, Lock
 import rospy
-from geometry_msgs.msg import PointStamped, QuaternionStamped, Vector3Stamped
+from geometry_msgs.msg import PointStamped, QuaternionStamped, Vector3Stamped,PoseWithCovarianceStamped
 from std_msgs.msg import Float32, UInt8
 from sensor_msgs.msg import NavSatFix, BatteryState, Joy
 from tf.transformations import euler_from_quaternion
+from nav_msgs.msg import Odometry
 import math
 
 class Queue:
@@ -58,6 +59,9 @@ class RosBridge:
         self.flight_status_queue = Queue(queue_size=1)
         self.rc_queue = Queue(queue_size=1)
 
+        self.ekf_preprocess_pose_position_queue = Queue(queue_size=1000)
+        self.odometry_filtered_queue = Queue(queue_size=1000)
+
         rospy.Subscriber('local_position', PointStamped, callback=self.loc_pos_cb, queue_size=1)
         rospy.Subscriber('attitude', QuaternionStamped, callback=self.att_cb, queue_size=1)
         rospy.Subscriber('velocity', Vector3Stamped, callback=self.vel_cb, queue_size=1)
@@ -70,6 +74,9 @@ class RosBridge:
         rospy.Subscriber('flight_status', UInt8, callback=self.flight_status_cb, queue_size=1)
         rospy.Subscriber('rc', Joy, callback=self.rc_cb, queue_size=1)
         rospy.Subscriber('flight_control_setpoint_generic', Joy, callback=self.flight_ctrl_sp_gen_cb, queue_size=1)
+
+        rospy.Subscriber('/ekf_preprocess/pose2', PoseWithCovarianceStamped, callback=self.ekf_pos, queue_size=1)
+        rospy.Subscriber('/odometry/filtered', Odometry, callback=self.odo_filt, queue_size=1)
 
     def loc_pos_cb(self, pos):
         self.local_position_queue.append((pos.header.stamp.to_nsec(), pos.point.x, pos.point.y, pos.point.z))
@@ -127,4 +134,12 @@ class RosBridge:
             self.cmd_vert_vel_queue.append((fcsg.header.stamp.to_nsec(),fcsg.axes[2]))
         if int(fcsg.axes[4]) & 0b00001100 == 0x00:
             self.cmd_yaw_queue.append((fcsg.header.stamp.to_nsec(),fcsg.axes[3]))
+        return
+
+    def ekf_pos(self, ekf_pos):
+        self.ekf_preprocess_pose_position_queue.append((ekf_pos.header.stamp.to_nsec(), ekf_pos.pose.pose.position.x, ekf_pos.pose.pose.position.y ,ekf_pos.pose.pose.position.z))
+        return
+
+    def odo_filt(self, odo_filt):
+        self.odometry_filtered_queue.append((odo_filt.header.stamp.to_nsec(), odo_filt.pose.pose.position.x, odo_filt.pose.pose.position.y ,odo_filt.pose.pose.position.z))
         return

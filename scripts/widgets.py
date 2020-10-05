@@ -29,8 +29,8 @@ class TabWidget(QTabWidget):
         QTabWidget.__init__(self)
         
         self.plot_widget_0 = GenPlotWidget(ros_bridge, (0, 0, (255,0,0,70)), (1, 1, (0,255,0,70)))
-        self.plot_widget_1 = GenPlotWidget(ros_bridge, (0, 0, (255,0,0,70)), (1, 1, (0,255,0,70)))
-        self.plot_widget_2 = GenPlotWidget(ros_bridge, (0, 0, (255,0,0,70)), (1, 1, (0,255,0,70)))
+        self.plot_widget_1 = GenPlotWidget(ros_bridge, (6, 0, (255,0,0,70)), (7, 1, (0,255,0,70)))
+        self.plot_widget_2 = GenPlotWidget(ros_bridge, (8, 2, (0,0,255,70)), (0, 0, (255,0,0,70)))
         self.vision_widget = VisionWidget(ros_bridge)
         self.mission_telem_widget = MissionTelemWidget(ros_bridge)
 
@@ -105,19 +105,20 @@ class CurveConfigWidget(QFrame):
         group1_layout.addWidget(g1_rb0, 0, 0)
         group1_layout.addWidget(g1_rb1, 0, 1)
         group1_layout.addWidget(g1_rb2, 0, 2)
-    
+        
         enter_button = QPushButton("确认")
         enter_button.clicked.connect(lambda: self.enter(parent, idx))
         enter_button.clicked.connect(self.close)
-
+        
         layout.addLayout(group0_layout, 0)
         layout.addLayout(group1_layout, 1)
         layout.addWidget(enter_button, 2)
+ 
     def enter(self, parent, idx):
-        if self.group0.checkedId() < 0 and self.group1.checkedId() < 0:
+        if self.group0.checkedId() is None and self.group1.checkedId() is None:
             pass
         else:
-            xian = self.group0.checkedId()
+            line = self.group0.checkedId()
             color = self.group1.checkedId()
             rgb = None
             if color == 0:
@@ -126,7 +127,7 @@ class CurveConfigWidget(QFrame):
                 rgb = (0,255,0,70)
             elif color == 2:
                 rgb = (0,0,255,70)
-            parent.curve_configs[idx] = (xian, color, rgb)    
+            parent.curve_configs[idx] = (line, color, rgb)    
             parent.curve_buttons[idx].setText(self.group0.checkedButton().text())
             parent.curve_buttons[idx].setStyleSheet("color: {};".format(self.group1.checkedButton().text()))  
 
@@ -145,7 +146,7 @@ class GenPlotWidget(QFrame):
         self.stop_button = ToggleButton(["暂停", "绘制"], self)
 
         self.plot = self.plot_widget.addPlot(row=0, col=0)
-        #self.plot.setXRange(0, 20)
+        self.plot.setXRange(0, 20)
         self.plot.showGrid(x=1, y=1)
         self.plot.showAxis('right')
         self.plot.showAxis('top')
@@ -154,7 +155,7 @@ class GenPlotWidget(QFrame):
         self.curve1 = pg.PlotCurveItem()
         self.plot.addItem(self.curve0)
         self.plot.addItem(self.curve1)
-
+        
         self.curve0_button.clicked.connect(lambda: self.config_curve(0))
         self.curve1_button.clicked.connect(lambda: self.config_curve(1))
         self.stop_button.clicked.connect(self.stop)
@@ -167,7 +168,8 @@ class GenPlotWidget(QFrame):
         self.curves = [self.curve0, self.curve1]
         self.curve_buttons = [self.curve0_button, self.curve1_button]
         self.curve_configs = [curve0_config, curve1_config]
-        
+        self.config_curve_initial(0)
+        self.config_curve_initial(1)
 
         self.timer = QTimer()
         self.timer.start(100)
@@ -180,7 +182,7 @@ class GenPlotWidget(QFrame):
             for i in range(num):
                 kind = self.curve_configs[i][0]
                 ts, val = self.switch_case(kind)
-                plot_parameter[i] = (ts, val, self.curve_configs[i][1],self.curve_configs[i][-1])
+                plot_parameter[i] = (ts, val, self.curve_configs[i][1], self.curve_configs[i][-1])
             self.plot_curve(self.curves, plot_parameter)
         return
     
@@ -203,22 +205,52 @@ class GenPlotWidget(QFrame):
             self.curve_config_widget = CurveConfigWidget(self, idx)
             self.curve_config_widget.show()
 
+    def config_curve_initial(self, idx):
+        if self.curve_config_widget is None or not self.curve_config_widget.isVisible():
+            for i in [0, 1]:
+                if self.curve_configs[i][0] == 0:
+                    self.curve_buttons[i].setText("位置E")
+                elif self.curve_configs[i][0] == 1:
+                    self.curve_buttons[i].setText("位置N") 
+                elif self.curve_configs[i][0] == 2:
+                    self.curve_buttons[i].setText("位置U") 
+                elif self.curve_configs[i][0] == 3:
+                    self.curve_buttons[i].setText("速度E") 
+                elif self.curve_configs[i][0] == 4:
+                    self.curve_buttons[i].setText("速度N") 
+                elif self.curve_configs[i][0] == 5:
+                    self.curve_buttons[i].setText("速度U") 
+                elif self.curve_configs[i][0] == 6:
+                    self.curve_buttons[i].setText("Roll角") 
+                elif self.curve_configs[i][0] == 7:
+                    self.curve_buttons[i].setText("Pitch角") 
+                elif self.curve_configs[i][0] == 8:
+                    self.curve_buttons[i].setText("Yaw角") 
+
+                if self.curve_configs[i][1] == 0:
+                    self.curve_buttons[i].setStyleSheet("color: red")
+                elif self.curve_configs[i][1] == 1:
+                    self.curve_buttons[i].setStyleSheet("color: green") 
+                elif self.curve_configs[i][1] == 2:
+                    self.curve_buttons[i].setStyleSheet("color: blue") 
+            self.curve_config_widget = CurveConfigWidget(self, idx)
+
     def plot_curve(self, curve, queue):
-        if queue is not None: 
-            ts_sta = np.asarray(queue[0][0], np.uint64)
+        if queue is not None:
+            ts_sta = np.asarray(queue[0][0], np.int64)
             idx_sta = find_nearest(ts_sta, ts_sta[-1] - 20 * 10**9)
-            for i in [0,1]:
-                ts = np.asarray(queue[i][0], np.uint64)
+            for i in [0, 1]:
+                ts = np.asarray(queue[i][0], np.int64)
                 val = np.asarray(queue[i][1], np.float32)
                 idx = find_nearest(ts, ts[-1] - 20 * 10**9)
                 t = (ts[idx:] - ts[idx_sta]) * 10**-9
                 pen = queue[i][2]
                 if pen == 0: 
-                    curve[i].setData(t, val[idx:], pen=pg.mkPen('r', width=2), brush=queue[i][3], fillLevel=0)
+                    curve[i].setData(t+20-t[-1], val[idx:], pen=pg.mkPen('r', width=2), brush=queue[i][3], fillLevel=0)
                 elif pen == 1:
-                    curve[i].setData(t, val[idx:], pen=pg.mkPen('g', width=2), brush=queue[i][3], fillLevel=0)
+                    curve[i].setData(t+20-t[-1], val[idx:], pen=pg.mkPen('g', width=2), brush=queue[i][3], fillLevel=0)
                 elif pen == 2:
-                    curve[i].setData(t, val[idx:], pen=pg.mkPen('b', width=2), brush=queue[i][3], fillLevel=0)
+                    curve[i].setData(t+20-t[-1], val[idx:], pen=pg.mkPen('b', width=2), brush=queue[i][3], fillLevel=0)
         return
     
     def stop(self):

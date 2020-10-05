@@ -5,7 +5,6 @@ import sys; sys.dont_write_bytecode = True
 import signal
 import rospy
 from PyQt5.QtWidgets import QApplication, QMainWindow, QGridLayout, QWidget
-
 from ros_bridge import RosBridge
 
 from widgets import TelemWidget, LocusWidget, GenPlotWidget, TabWidget
@@ -25,8 +24,8 @@ class MainWindow(QMainWindow):
         self.locus_widget = LocusWidget(ros_bridge)
         self.telem_widget = TelemWidget(ros_bridge)
         self.plot_widget_0 = GenPlotWidget(ros_bridge, (0, 0, (255,0,0,70)), (1, 1, (0,255,0,70)))
-        self.plot_widget_1 = GenPlotWidget(ros_bridge, (0, 0, (255,0,0,70)), (1, 1, (0,255,0,70)))
-        self.plot_widget_2 = GenPlotWidget(ros_bridge, (0, 0, (255,0,0,70)), (1, 1, (0,255,0,70)))
+        self.plot_widget_1 = GenPlotWidget(ros_bridge, (2, 2, (0,0,255,70)), (3, 0, (255,0,0,70)))
+        self.plot_widget_2 = GenPlotWidget(ros_bridge, (4, 1, (0,255,0,70)), (5, 2, (0,0,255,70)))
         self.tab_widget = TabWidget(ros_bridge)
 
         self.col0_layout.addWidget(self.locus_widget, 0, 0)
