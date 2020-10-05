@@ -1,7 +1,7 @@
 <launch>
     <arg name="gui" default="true"/>
     <arg name="image_view" default="false"/>
-    <arg name="bag_path" default="$(find ground_control)/bags/demo_flight_control.bag"/>
+    <arg name="bag_path" default="$(find ground_control)/bags/2020-10-05-13-18-42_0.bag"/>
     <node name="player" pkg="rosbag" type="play" args="$(arg bag_path)"/>
     <include file="$(find ground_control)/launch/ground_control.launch">
         <arg name="gui" value="$(arg gui)"/>
