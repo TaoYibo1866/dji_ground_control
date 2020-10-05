@@ -75,7 +75,7 @@ class RosBridge:
         rospy.Subscriber('rc', Joy, callback=self.rc_cb, queue_size=1)
         rospy.Subscriber('flight_control_setpoint_generic', Joy, callback=self.flight_ctrl_sp_gen_cb, queue_size=1)
 
-        rospy.Subscriber('/ekf_preprocess/pose2', PoseWithCovarianceStamped, callback=self.ekf_pos, queue_size=1)
+        rospy.Subscriber('/ekf_preprocess/pose0', PoseWithCovarianceStamped, callback=self.ekf_pos, queue_size=1)
         rospy.Subscriber('/odometry/filtered', Odometry, callback=self.odo_filt, queue_size=1)
 
     def loc_pos_cb(self, pos):
